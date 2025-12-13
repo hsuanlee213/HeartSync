@@ -1,0 +1,145 @@
+package edu.northeastern.group13project;
+
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.ImageButton;
+import android.widget.Spinner;
+import android.widget.Toast;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseUser;
+import com.google.firebase.auth.UserProfileChangeRequest;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
+
+public class RegisterActivity extends AppCompatActivity {
+
+    private static final String TAG = "RegisterActivity";
+    // Removed etUsername field. Registration now only uses etEmail as the primary identifier.
+    private EditText etEmail, etPassword, etAge, etWeight, etHeight;
+    private Spinner spinnerFitnessLevel;
+    private Button btnCreateAccount;
+    private ImageButton btnBack;
+
+    // Firebase Auth is the primary authentication method
+    private FirebaseAuth auth;
+    private FirebaseFirestore db;
+    private SharedPreferences prefs;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_register);
+
+        // Initialize Firebase services
+        auth = FirebaseAuth.getInstance();
+        db = FirebaseFirestore.getInstance();
+        prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+
+        // NOTE: et_reg_username element MUST be removed from activity_register.xml
+        // etUsername = findViewById(R.id.et_reg_username); // Removed binding
+
+        etEmail = findViewById(R.id.et_reg_email);
+        etPassword = findViewById(R.id.et_reg_password);
+        etAge = findViewById(R.id.et_age);
+        etWeight = findViewById(R.id.et_weight);
+        etHeight = findViewById(R.id.et_height);
+        spinnerFitnessLevel = findViewById(R.id.spinner_fitness_level);
+        btnCreateAccount = findViewById(R.id.btn_create_account);
+        btnBack = findViewById(R.id.btn_back_register);
+
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.fitness_levels, android.R.layout.simple_spinner_item);
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerFitnessLevel.setAdapter(adapter);
+
+        btnBack.setOnClickListener(v -> finish());
+
+        btnCreateAccount.setOnClickListener(v -> {
+            if (validateInputs()) {
+                registerUser();
+            }
+        });
+    }
+
+    private boolean validateInputs() {
+        // Only checking Email and Password, as Username field is removed.
+        if (etEmail.getText().toString().trim().isEmpty() ||
+                etPassword.getText().toString().trim().isEmpty()) {
+            Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show();
+            return false;
+        }
+        return true;
+    }
+
+    private void registerUser() {
+        // final String username = etUsername.getText().toString().trim(); // Removed
+        final String email = etEmail.getText().toString().trim();
+        final String password = etPassword.getText().toString().trim();
+
+        // Step 1: Create user using Firebase Auth
+        auth.createUserWithEmailAndPassword(email, password)
+                .addOnSuccessListener(authResult -> {
+                    FirebaseUser user = authResult.getUser();
+                    if (user != null) {
+                        // Step 2: Store profile data in Firestore. No separate 'username' needed from UI input.
+                        // We will use the email as the primary display identifier.
+                        saveUserProfile(user);
+                    }
+                })
+                .addOnFailureListener(e -> {
+                    // Handle common registration errors
+                    Log.e(TAG, "Firebase Auth Registration failed", e);
+                    Toast.makeText(this, "Registration failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                });
+    }
+
+    // Updated signature: Removed username parameter
+    private void saveUserProfile(FirebaseUser user) {
+        String userId = user.getUid();
+
+        // Use user.getUid() as the document ID to link Auth and Firestore data
+        Map<String, Object> profileData = new HashMap<>();
+        // profileData.put("username", username); // Removed saving separate username field
+        profileData.put("email", user.getEmail()); // Ensure Email is stored
+        profileData.put("age", etAge.getText().toString());
+        profileData.put("weight", etWeight.getText().toString());
+        profileData.put("height", etHeight.getText().toString());
+        profileData.put("fitness_level", spinnerFitnessLevel.getSelectedItem().toString());
+        profileData.put("created_at", System.currentTimeMillis());
+
+        // Use set() and UID to create a unique document for this user
+        db.collection("users").document(userId)
+                .set(profileData)
+                .addOnSuccessListener(aVoid -> {
+                    // Step 3: Save local preferences and navigate
+                    SharedPreferences.Editor editor = prefs.edit();
+                    editor.putString("user_id", userId);
+                    // editor.putString("username", username); // Removed saving separate username to prefs
+                    editor.putString("email", user.getEmail()); // Ensure Email is saved
+                    editor.apply();
+
+                    Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show();
+
+                    // Navigate to the main activity
+                    Intent intent = new Intent(RegisterActivity.this, MainActivity.class);
+                    intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                    startActivity(intent);
+                    finish();
+                })
+                .addOnFailureListener(e -> {
+                    Log.e(TAG, "Firestore Profile Save failed", e);
+                    Toast.makeText(this, "Profile save failed after authentication: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                    // Optional: Delete the FirebaseAuth user here for cleanup
+                    user.delete();
+                });
+    }
+}

@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Group13Project</string>
+    <string name="profile_icon_desc">User Profile Icon</string>
+    <string name="play_button_desc">Play Button</string>
+    <string name="title_music_library">Music Library</string>
+    <!-- Yuchen - Added for registration -->
+    <string-array name="fitness_levels">
+        <item>Beginner</item>
+        <item>Intermediate</item>
+        <item>Advanced</item>
+    </string-array>
+    <!-- Yuchen - End -->
+</resources>
