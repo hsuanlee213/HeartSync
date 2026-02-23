@@ -6,11 +6,11 @@ plugins {
 }
 
 android {
-    namespace = "edu.northeastern.group13project"
+    namespace = "com.heartbeatmusic"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "edu.northeastern.group13project"
+        applicationId = "com.heartbeatmusic"
         minSdk = 27
         targetSdk = 36
         versionCode = 1
