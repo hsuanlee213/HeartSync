@@ -6,7 +6,8 @@
     android:orientation="vertical"
     android:gravity="center"
     android:padding="32dp"
-    android:background="@drawable/gradient_background">
+    android:background="@drawable/gradient_background"
+    android:fitsSystemWindows="true">
 
     <ImageView
         android:layout_width="100dp"
@@ -24,7 +25,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Our App"
+        android:text="HeartBeat Music"
         android:textSize="32sp"
         android:textStyle="bold"
         android:textColor="@color/white"

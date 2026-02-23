@@ -5,17 +5,22 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:background="@drawable/gradient_background"
-    android:padding="24dp">
+    android:padding="24dp"
+    android:fitsSystemWindows="true">
 
-    <!-- Back Button -->
+    <!-- Back Button: 48dp touch target, circular style, returns to welcome screen -->
     <ImageButton
         android:id="@+id/btn_back"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:padding="12dp"
         android:src="@drawable/ic_back"
-        android:background="?attr/selectableItemBackgroundBorderless"
+        android:background="@drawable/bg_back_button"
         android:tint="@color/white"
-        android:layout_marginBottom="32dp"/>
+        android:contentDescription="Back to welcome"
+        android:clickable="true"
+        android:focusable="true"
+        android:layout_marginBottom="24dp"/>
 
     <!-- Login Title -->
     <TextView
