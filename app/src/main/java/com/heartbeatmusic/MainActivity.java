@@ -28,6 +28,11 @@ import android.os.Bundle;
 import com.heartbeatmusic.data.model.Song;
 import com.heartbeatmusic.data.remote.FirebaseStorageManager;
 import com.heartbeatmusic.data.remote.MusicRepository;
+import com.heartbeatmusic.heartsync.ActivityMode;
+import com.heartbeatmusic.heartsync.HeartSyncBpmContentKt;
+import com.heartbeatmusic.heartsync.HeartSyncViewModel;
+import androidx.compose.ui.platform.ComposeView;
+import androidx.lifecycle.ViewModelProvider;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,7 +42,6 @@ public class MainActivity extends AppCompatActivity {
     private Button btnLibrary;
     private TextView tvTrack;
     private TextView tvPlaybackTitle;
-    private TextView tvBpm;
     private Button btnPlayPause;
     private SeekBar seekBar;
 
@@ -91,23 +95,37 @@ public class MainActivity extends AppCompatActivity {
         tvPlaybackTitle = findViewById(R.id.tv_playback_title);
         btnPlayPause = findViewById(R.id.btn_play_pause);
         tvTrack = findViewById(R.id.tv_song_info);
-        tvBpm   = findViewById(R.id.tv_bpm);
         seekBar = findViewById(R.id.seek_bar);
+
+        // HeartSync: Compose UI for real-time heart rate BPM
+        ComposeView composeBpm = findViewById(R.id.compose_bpm);
+        HeartSyncBpmContentKt.setHeartSyncBpmContent(composeBpm);
+
+        HeartSyncViewModel heartSyncVm = new ViewModelProvider(this).get(HeartSyncViewModel.class);
 
         // mode clicking logic
         ImageView btnExercise = findViewById(R.id.btn_exercise);
         ImageView btnCalm     = findViewById(R.id.btn_calm);
         ImageView btnDriving  = findViewById(R.id.btn_driving);
 
-        // when clicked play song with given mode
+        // when clicked play song with given mode + update HeartSync BPM range
         if (btnExercise != null) {
-            btnExercise.setOnClickListener(v -> playRandomSongForMode("exercise"));
+            btnExercise.setOnClickListener(v -> {
+                heartSyncVm.setMode(ActivityMode.EXERCISE);
+                playRandomSongForMode("exercise");
+            });
         }
         if (btnCalm != null) {
-            btnCalm.setOnClickListener(v -> playRandomSongForMode("calm"));
+            btnCalm.setOnClickListener(v -> {
+                heartSyncVm.setMode(ActivityMode.CALM);
+                playRandomSongForMode("calm");
+            });
         }
         if (btnDriving != null) {
-            btnDriving.setOnClickListener(v -> playRandomSongForMode("driving"));
+            btnDriving.setOnClickListener(v -> {
+                heartSyncVm.setMode(ActivityMode.DRIVING);
+                playRandomSongForMode("driving");
+            });
         }
 
         tvUsername = findViewById(R.id.tv_username);
@@ -164,14 +182,7 @@ public class MainActivity extends AppCompatActivity {
                     if (tvTrack != null) tvTrack.setText(displayTitle + " - " + displayArtist);
                 });
 
-                if (tvBpm != null) {
-                    if (md != null && md.extras != null && md.extras.containsKey("bpm")) {
-                        final String bpmText = String.valueOf(md.extras.getInt("bpm"));
-                        runOnUiThread(() -> tvBpm.setText(bpmText));
-                    } else {
-                        runOnUiThread(() -> tvBpm.setText("-"));
-                    }
-                }
+                // BPM displayed by HeartSync Compose UI
             }
         });
 
@@ -263,10 +274,7 @@ public class MainActivity extends AppCompatActivity {
                 tvTrack.setText(displayTitle + " - " + displayArtist);
             }
 
-            // now playing card - bpm
-            if (tvBpm != null) {
-                tvBpm.setText(bpm > 0 ? String.valueOf(bpm) : "-");
-            }
+            // BPM displayed by HeartSync Compose UI
 
             Bundle extras = new Bundle();
             if (bpm > 0) {
@@ -378,9 +386,7 @@ public class MainActivity extends AppCompatActivity {
                     tvTrack.setText(displayTitle + " - " + displayArtist);
                 }
 
-                if (tvBpm != null && md != null && md.extras != null && md.extras.containsKey("bpm")) {
-                    tvBpm.setText(String.valueOf(md.extras.getInt("bpm")));
-                }
+                // BPM displayed by HeartSync Compose UI
             }
 
             @Override
@@ -427,15 +433,7 @@ public class MainActivity extends AppCompatActivity {
                     tvTrack.setText(displayTitle + " - " + displayArtist);
                 }
 
-                if (tvBpm != null) {
-                    if (md != null && md.extras != null && md.extras.containsKey("bpm")) {
-                        tvBpm.setText(String.valueOf(md.extras.getInt("bpm")));
-                    } else {
-                        tvBpm.setText("-");
-                    }
-                }
-
-                // TODO: if put bpm in metadata.extras, update tvBpm here
+                // BPM displayed by HeartSync Compose UI
             }
 
             btnPlayPause.setText(player.isPlaying() ? "Pause" : "Play");

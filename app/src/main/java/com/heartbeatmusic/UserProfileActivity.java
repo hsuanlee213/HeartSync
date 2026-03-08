@@ -44,17 +44,17 @@ public class UserProfileActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_user_profile);
 
-        // --- 确保返回按钮显示的设置 START ---
+        // --- Ensure back button is visible START ---
         MaterialToolbar toolbar = findViewById(R.id.toolbar_profile);
         if (toolbar != null) {
             setSupportActionBar(toolbar);
             if (getSupportActionBar() != null) {
-                // 启用向上导航按钮（返回箭头）
+                // Enable up navigation button (back arrow)
                 getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                // 设置标题，虽然 XML 中已有，但这里再次设置以确保
+                // Set title (redundant with XML but ensures visibility)
                 getSupportActionBar().setTitle("Edit Profile");
 
-                // 确保返回箭头（导航图标）是白色的，与标题颜色一致
+                // Ensure back arrow (nav icon) is white to match title color
                 try {
                     toolbar.setNavigationIconTint(ContextCompat.getColor(this, android.R.color.white));
                 } catch (Exception e) {
@@ -62,7 +62,7 @@ public class UserProfileActivity extends AppCompatActivity {
                 }
             }
         }
-        // --- 确保返回按钮显示的设置 END ---
+        // --- Ensure back button is visible END ---
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.user_profile), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
