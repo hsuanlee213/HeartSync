@@ -92,25 +92,10 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent">
 
-                <TextView
-                    android:id="@+id/tv_bpm_label"
+                <androidx.compose.ui.platform.ComposeView
+                    android:id="@+id/compose_bpm"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="Song bpm:"
-                    android:textSize="14sp"
-                    android:textColor="#444444"
-                    android:layout_marginBottom="4dp"/>
-
-                <TextView
-                    android:id="@+id/tv_bpm"
-                    android:layout_width="48dp"
-                    android:layout_height="48dp"
-                    android:gravity="center"
-                    android:text="0"
-                    android:textSize="20sp"
-                    android:textStyle="bold"
-                    android:background="@drawable/circle_bpm"
-                    android:textColor="#000000"/>
+                    android:layout_height="wrap_content"/>
             </LinearLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
