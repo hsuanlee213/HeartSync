@@ -4,6 +4,11 @@
     <!-- Required for streaming audio from the network during testing -->
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Required for Android 11+ to see Google Play Services (Firebase Auth, etc.) -->
+    <queries>
+        <package android:name="com.google.android.gms" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
