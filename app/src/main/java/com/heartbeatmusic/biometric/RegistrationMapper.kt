@@ -2,56 +2,45 @@ package com.heartbeatmusic.biometric
 
 /**
  * Maps raw registration fields to BioProfile parameters.
+ * All fields are optional with stable defaults.
  */
 object RegistrationMapper {
 
     /**
-     * Maps fitness level string to algorithmSensitivity.
-     * Beginner=0.5, Intermediate=1.0, Advanced=1.5
-     */
-    fun mapFitnessLevelToSensitivity(level: String): Float = when (level) {
-        "Beginner" -> 0.5f
-        "Intermediate" -> 1.0f
-        "Advanced" -> 1.5f
-        else -> 1.0f
-    }
-
-    /**
-     * Age -> maxHeartRate (220 - age). Clamped to valid range.
+     * Age -> maxHeartRate (220 - age). Default 25 if empty.
      */
     fun ageToMaxHeartRate(ageStr: String?): Int {
-        val age = ageStr?.toIntOrNull() ?: return BioProfile.DEFAULT_MAX_HR
+        val age = ageStr?.toIntOrNull() ?: BioProfile.DEFAULT_AGE
         return (220 - age).coerceIn(60, 220)
     }
 
     /**
-     * Weight -> restingBPM. Default 70 if empty/invalid.
+     * Weight -> restingBPM. Default 70 if empty.
      */
     fun weightToRestingBPM(weightStr: String?): Int {
-        val value = weightStr?.toIntOrNull() ?: return BioProfile.DEFAULT_RESTING_BPM
+        val value = weightStr?.toIntOrNull() ?: BioProfile.DEFAULT_RESTING_BPM
         return value.coerceIn(40, 120)
     }
 
     /**
-     * Height (1-200) -> energyBias (0.0 to 1.0).
+     * Energy level string (e.g. "3 - Balanced") -> 1-5. Default 3 if empty.
      */
-    fun heightToEnergyBias(heightStr: String?): Float {
-        val value = heightStr?.toFloatOrNull() ?: return 0.5f
-        return (value / 200f).coerceIn(BioProfile.MIN_ENERGY_BIAS, BioProfile.MAX_ENERGY_BIAS)
+    fun parseEnergyLevel(energyStr: String?): Int {
+        val level = energyStr?.trim()?.take(1)?.toIntOrNull() ?: BioProfile.DEFAULT_ENERGY_LEVEL
+        return level.coerceIn(1, 5)
     }
 
     /**
      * Build BioProfile from raw registration inputs.
+     * Uses toIntOrNull() ?: defaultValue for safe parsing.
      */
     fun buildBioProfile(
         ageStr: String?,
         weightStr: String?,
-        heightStr: String?,
-        fitnessLevel: String
+        energyLevelStr: String?
     ): BioProfile = BioProfile(
         maxHeartRate = ageToMaxHeartRate(ageStr),
         restingBPM = weightToRestingBPM(weightStr),
-        energyBias = heightToEnergyBias(heightStr),
-        algorithmSensitivity = mapFitnessLevelToSensitivity(fitnessLevel)
+        energyLevel = parseEnergyLevel(energyLevelStr)
     )
 }

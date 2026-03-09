@@ -51,7 +51,8 @@
 
         <activity
             android:name=".RegisterActivity"
-            android:exported="false"/>
+            android:exported="false"
+            android:windowSoftInputMode="adjustPan"/>
 
         <!-- Other existing activities -->
         <activity

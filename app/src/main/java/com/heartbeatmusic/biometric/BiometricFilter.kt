@@ -6,14 +6,16 @@ import kotlinx.coroutines.flow.asStateFlow
 
 /**
  * Singleton that calculates music intensity from current BPM using BioProfile.
- * Includes smoothing to prevent rapid music switching.
  *
- * Formula: intensity = (currentBPM - restingBPM) / (maxHeartRate - restingBPM) * energyBias
- * Divide-by-zero safe: when maxHR == restingBPM, returns 0.5f (neutral).
+ * Formula:
+ * - intensityRatio = (currentBPM - restingBPM) / (maxHeartRate - restingBPM)
+ * - energyMultiplier from Level 1-5: [0.6, 0.8, 1.0, 1.2, 1.4]
+ * - finalIntensity = intensityRatio * energyMultiplier
+ *
+ * Safety: If maxHeartRate <= restingBPM, use SAFE_DENOMINATOR (110) to avoid divide-by-zero.
  */
 object BiometricFilter {
 
-    private var _smoothedIntensity = 0.5f
     private var _profile: BioProfile? = null
 
     private val _intensityFlow = MutableStateFlow(0.5f)
@@ -32,36 +34,25 @@ object BiometricFilter {
     fun getBioProfile(): BioProfile? = _profile
 
     /**
-     * Calculate raw intensity from current BPM (no smoothing).
-     * Returns 0.0 to 1.0. Safe when maxHeartRate == restingBPM.
-     */
-    fun calculateRawIntensity(currentBPM: Int): Float {
-        val profile = _profile ?: return 0.5f
-        val denominator = profile.maxHeartRate - profile.restingBPM
-        if (denominator <= 0) return 0.5f // Avoid divide-by-zero
-        val raw = (currentBPM - profile.restingBPM).toFloat() / denominator * profile.energyBias
-        return raw.coerceIn(0f, 1f)
-    }
-
-    /**
-     * Calculate smoothed music intensity. Uses exponential moving average.
-     * Higher algorithmSensitivity = faster response (less smoothing).
-     * Alpha = min(algorithmSensitivity / 2, 1.0) for response rate.
+     * Calculate music intensity from current BPM.
+     * intensityRatio = (currentBPM - restingBPM) / denominator
+     * finalIntensity = intensityRatio * energyMultiplier
+     * If maxHeartRate <= restingBPM, denominator = SAFE_DENOMINATOR (110).
      */
     fun calculateMusicIntensity(currentBPM: Int): Float {
         val profile = _profile ?: return 0.5f
-        val raw = calculateRawIntensity(currentBPM)
-        val alpha = (profile.algorithmSensitivity / 2f).coerceIn(0.1f, 1f)
-        _smoothedIntensity = _smoothedIntensity * (1 - alpha) + raw * alpha
-        val result = _smoothedIntensity.coerceIn(0f, 1f)
-        _intensityFlow.value = result
-        return result
+        val denominator = (profile.maxHeartRate - profile.restingBPM).takeIf { it > 0 }
+            ?: BioProfile.SAFE_DENOMINATOR
+        val intensityRatio = ((currentBPM - profile.restingBPM).toFloat() / denominator).coerceIn(0f, 1f)
+        val finalIntensity = (intensityRatio * profile.energyMultiplier).coerceIn(0f, 1f)
+        _intensityFlow.value = finalIntensity
+        return finalIntensity
     }
 
     /**
      * Reset internal state (e.g. when profile changes).
      */
     fun reset() {
-        _smoothedIntensity = 0.5f
+        // No persistent state to reset in new formula
     }
 }

@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
@@ -12,7 +13,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -27,8 +27,8 @@ import java.util.Map;
 public class RegisterActivity extends AppCompatActivity {
 
     private static final String TAG = "RegisterActivity";
-    // Removed etUsername field. Registration now only uses etEmail as the primary identifier.
-    private EditText etEmail, etPassword, etAge, etWeight, etHeight;
+    private EditText etEmail, etPassword, etAge, etWeight;
+    private AutoCompleteTextView dropdownEnergyLevel;
     private Spinner spinnerFitnessLevel;
     private Button btnCreateAccount;
     private ImageButton btnBack;
@@ -55,21 +55,20 @@ public class RegisterActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.et_reg_password);
         etAge = findViewById(R.id.et_age);
         etWeight = findViewById(R.id.et_weight);
-        etHeight = findViewById(R.id.et_height);
+        dropdownEnergyLevel = findViewById(R.id.dropdown_energy_level);
         spinnerFitnessLevel = findViewById(R.id.spinner_fitness_level);
         btnCreateAccount = findViewById(R.id.btn_create_account);
         btnBack = findViewById(R.id.btn_back_register);
 
-        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+        ArrayAdapter<CharSequence> fitnessAdapter = ArrayAdapter.createFromResource(this,
                 R.array.fitness_levels, android.R.layout.simple_spinner_item);
-        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerFitnessLevel.setAdapter(adapter);
+        fitnessAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinnerFitnessLevel.setAdapter(fitnessAdapter);
 
-        // Runtime hint updates for biometric mapping
-        TextInputLayout tilWeight = findViewById(R.id.til_weight);
-        TextInputLayout tilHeight = findViewById(R.id.til_height);
-        if (tilWeight != null) tilWeight.setHint("Resting BPM (Default: 70)");
-        if (tilHeight != null) tilHeight.setHint("Music Energy Preference (1-200)");
+        ArrayAdapter<CharSequence> energyAdapter = ArrayAdapter.createFromResource(this,
+                R.array.energy_levels, android.R.layout.simple_dropdown_item_1line);
+        dropdownEnergyLevel.setAdapter(energyAdapter);
+        dropdownEnergyLevel.setText("3 - Balanced", false);
 
         btnBack.setOnClickListener(v -> finish());
 
@@ -112,32 +111,28 @@ public class RegisterActivity extends AppCompatActivity {
                 });
     }
 
-    // Updated signature: Removed username parameter. Saves Bio-Profile (transformed params).
     private void saveUserProfile(FirebaseUser user) {
         String userId = user.getUid();
         String ageStr = etAge.getText().toString().trim();
         String weightStr = etWeight.getText().toString().trim();
-        String heightStr = etHeight.getText().toString().trim();
+        String energyLevelStr = dropdownEnergyLevel.getText().toString().trim();
         String fitnessLevel = spinnerFitnessLevel.getSelectedItem().toString();
 
-        // Build Bio-Profile from transformed registration data
+        // Build Bio-Profile with defaults for empty fields (age=25, restingBPM=70, energyLevel=3)
         BioProfile bioProfile = RegistrationMapper.INSTANCE.buildBioProfile(
                 ageStr.isEmpty() ? null : ageStr,
                 weightStr.isEmpty() ? null : weightStr,
-                heightStr.isEmpty() ? null : heightStr,
-                fitnessLevel);
+                energyLevelStr.isEmpty() ? null : energyLevelStr);
 
-        // Use user.getUid() as the document ID to link Auth and Firestore data
         Map<String, Object> profileData = new HashMap<>();
         profileData.put("email", user.getEmail());
         profileData.put("age", ageStr);
         profileData.put("weight", weightStr);
-        profileData.put("height", heightStr);
+        profileData.put("energy_level", energyLevelStr);
         profileData.put("fitness_level", fitnessLevel);
         profileData.put("bio_max_heart_rate", bioProfile.getMaxHeartRate());
         profileData.put("bio_resting_bpm", bioProfile.getRestingBPM());
-        profileData.put("bio_energy_bias", bioProfile.getEnergyBias());
-        profileData.put("bio_algorithm_sensitivity", bioProfile.getAlgorithmSensitivity());
+        profileData.put("bio_energy_level", bioProfile.getEnergyLevel());
         profileData.put("created_at", System.currentTimeMillis());
 
         // Use set() and UID to create a unique document for this user

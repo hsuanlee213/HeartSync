@@ -95,14 +95,13 @@ public class LoginFormActivity extends AppCompatActivity {
                     if (documentSnapshot.exists() && documentSnapshot.contains("bio_max_heart_rate")) {
                         Long maxHr = documentSnapshot.getLong("bio_max_heart_rate");
                         Long resting = documentSnapshot.getLong("bio_resting_bpm");
-                        Double energy = documentSnapshot.getDouble("bio_energy_bias");
-                        Double sens = documentSnapshot.getDouble("bio_algorithm_sensitivity");
-                        if (maxHr != null && resting != null && energy != null && sens != null) {
+                        Long energyLevel = documentSnapshot.getLong("bio_energy_level");
+                        if (maxHr != null && resting != null) {
+                            int level = (energyLevel != null) ? energyLevel.intValue() : 3;
                             BioProfile bioProfile = new BioProfile(
                                     maxHr.intValue(),
                                     resting.intValue(),
-                                    energy.floatValue(),
-                                    sens.floatValue()
+                                    Math.max(1, Math.min(5, level))
                             );
                             BioProfileStorage.INSTANCE.save(prefs, bioProfile);
                             BiometricFilter.INSTANCE.setBioProfile(bioProfile);

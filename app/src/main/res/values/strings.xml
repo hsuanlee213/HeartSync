@@ -10,4 +10,11 @@
         <item>Advanced</item>
     </string-array>
     <!-- Yuchen - End -->
+    <string-array name="energy_levels">
+        <item>1 - Zen</item>
+        <item>2 - Chill</item>
+        <item>3 - Balanced</item>
+        <item>4 - High Energy</item>
+        <item>5 - Insane</item>
+    </string-array>
 </resources>

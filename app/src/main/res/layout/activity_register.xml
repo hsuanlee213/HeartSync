@@ -100,19 +100,21 @@
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="12dp"/>
 
-                <!-- Age, Weight, Height in a row (OPTIMIZED for consistency and input type) -->
+                <!-- Age, Resting BPM, Energy Level in a row (all optional) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:layout_marginBottom="12dp">
 
-                    <!-- Age Field -->
+                    <!-- Age Field (optional, default 25) -->
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_age"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:hint="Age"
+                        app:placeholderText="25"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_marginEnd="8dp">
 
@@ -123,13 +125,17 @@
                             android:inputType="number"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Weight Field -> Resting BPM -->
+                    <!-- Resting BPM (optional, default 70) -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_weight"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="Weight (kg)"
+                        android:minHeight="72dp"
+                        android:hint="Resting BPM"
+                        app:placeholderText="70"
+                        app:helperText="Resting heart rate, typically around 70 for most people"
+                        app:helperTextEnabled="true"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                         android:layout_marginEnd="8dp">
 
@@ -137,27 +143,31 @@
                             android:id="@+id/et_weight"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="number"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Height Field -> Music Energy Preference -->
+                    <!-- Energy Level (optional, dropdown, default 3 - Balanced) -->
                     <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/til_height"
+                        android:id="@+id/til_energy_level"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:hint="Height (cm)"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+                        android:hint="Energy Level"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_height"
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/dropdown_energy_level"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="numberDecimal"/>
+                            android:inputType="none"
+                            android:focusable="true"
+                            android:focusableInTouchMode="false"
+                            android:clickable="true"
+                            android:minHeight="48dp"/>
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Fitness Level (OPTIMIZED for consistency by wrapping in TextInputLayout) -->
+                <!-- Fitness Level (optional) -->
                 <com.google.android.material.textfield.TextInputLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
