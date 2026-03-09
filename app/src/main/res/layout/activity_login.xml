@@ -10,9 +10,11 @@
     android:fitsSystemWindows="true">
 
     <ImageView
-        android:layout_width="100dp"
-        android:layout_height="100dp"
-        android:src="@drawable/ic_music_note"
+        android:layout_width="140dp"
+        android:layout_height="140dp"
+        android:src="@drawable/login_logo"
+        android:contentDescription="@string/app_name"
+        android:scaleType="fitCenter"
         android:layout_marginBottom="32dp"/>
 
     <TextView
