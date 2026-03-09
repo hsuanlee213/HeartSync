@@ -97,7 +97,7 @@ public class MainActivity extends AppCompatActivity {
         tvTrack = findViewById(R.id.tv_song_info);
         seekBar = findViewById(R.id.seek_bar);
 
-        // HeartSync: Compose UI for real-time heart rate BPM
+        // HeartSync: Compose UI for real-time heart rate BPM (includes pulse animation)
         ComposeView composeBpm = findViewById(R.id.compose_bpm);
         HeartSyncBpmContentKt.setHeartSyncBpmContent(composeBpm);
 
