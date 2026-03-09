@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 import android.os.Bundle;
+import com.heartbeatmusic.biometric.BioProfile;
+import com.heartbeatmusic.biometric.BioProfileStorage;
+import com.heartbeatmusic.biometric.BiometricFilter;
 import com.heartbeatmusic.data.model.Song;
 import com.heartbeatmusic.data.remote.FirebaseStorageManager;
 import com.heartbeatmusic.data.remote.MusicRepository;
@@ -74,6 +77,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
+        // Restore Bio-Profile from SharedPreferences (e.g. after app restart)
+        BioProfile savedProfile = BioProfileStorage.INSTANCE.load(prefs);
+        if (savedProfile != null) {
+            BiometricFilter.INSTANCE.setBioProfile(savedProfile);
+        }
         if (!prefs.contains("user_id")) {
             Intent loginIntent = new Intent(this, LoginActivity.class);
             loginIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);

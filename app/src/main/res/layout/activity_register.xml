@@ -123,8 +123,9 @@
                             android:inputType="number"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Weight Field (Using numberDecimal for better input) -->
+                    <!-- Weight Field -> Resting BPM -->
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_weight"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
@@ -139,8 +140,9 @@
                             android:inputType="numberDecimal"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Height Field (Using numberDecimal for better input) -->
+                    <!-- Height Field -> Music Energy Preference -->
                     <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/til_height"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"

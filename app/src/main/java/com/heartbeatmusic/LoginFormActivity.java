@@ -13,6 +13,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.heartbeatmusic.biometric.BioProfile;
+import com.heartbeatmusic.biometric.BioProfileStorage;
+import com.heartbeatmusic.biometric.BiometricFilter;
 
 public class LoginFormActivity extends AppCompatActivity {
 
@@ -88,12 +91,29 @@ public class LoginFormActivity extends AppCompatActivity {
                         username = documentSnapshot.getString("username");
                     }
 
+                    // Load Bio-Profile from Firestore if available (for returning users)
+                    if (documentSnapshot.exists() && documentSnapshot.contains("bio_max_heart_rate")) {
+                        Long maxHr = documentSnapshot.getLong("bio_max_heart_rate");
+                        Long resting = documentSnapshot.getLong("bio_resting_bpm");
+                        Double energy = documentSnapshot.getDouble("bio_energy_bias");
+                        Double sens = documentSnapshot.getDouble("bio_algorithm_sensitivity");
+                        if (maxHr != null && resting != null && energy != null && sens != null) {
+                            BioProfile bioProfile = new BioProfile(
+                                    maxHr.intValue(),
+                                    resting.intValue(),
+                                    energy.floatValue(),
+                                    sens.floatValue()
+                            );
+                            BioProfileStorage.INSTANCE.save(prefs, bioProfile);
+                            BiometricFilter.INSTANCE.setBioProfile(bioProfile);
+                            BiometricFilter.INSTANCE.reset();
+                        }
+                    }
+
                     // Step 4: Save local preferences and navigate
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putString("user_id", user.getUid());
-                    // Save custom username (if retrieved)
                     editor.putString("username", username);
-                    // Ensure Email is saved correctly
                     editor.putString("email", user.getEmail());
                     editor.apply();
 

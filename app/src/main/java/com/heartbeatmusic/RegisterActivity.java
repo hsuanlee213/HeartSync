@@ -12,10 +12,14 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.google.android.material.textfield.TextInputLayout;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
-import com.google.firebase.auth.UserProfileChangeRequest;
 import com.google.firebase.firestore.FirebaseFirestore;
+import com.heartbeatmusic.biometric.BioProfile;
+import com.heartbeatmusic.biometric.BioProfileStorage;
+import com.heartbeatmusic.biometric.BiometricFilter;
+import com.heartbeatmusic.biometric.RegistrationMapper;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -61,6 +65,12 @@ public class RegisterActivity extends AppCompatActivity {
         adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
         spinnerFitnessLevel.setAdapter(adapter);
 
+        // Runtime hint updates for biometric mapping
+        TextInputLayout tilWeight = findViewById(R.id.til_weight);
+        TextInputLayout tilHeight = findViewById(R.id.til_height);
+        if (tilWeight != null) tilWeight.setHint("Resting BPM (Default: 70)");
+        if (tilHeight != null) tilHeight.setHint("Music Energy Preference (1-200)");
+
         btnBack.setOnClickListener(v -> finish());
 
         btnCreateAccount.setOnClickListener(v -> {
@@ -102,29 +112,46 @@ public class RegisterActivity extends AppCompatActivity {
                 });
     }
 
-    // Updated signature: Removed username parameter
+    // Updated signature: Removed username parameter. Saves Bio-Profile (transformed params).
     private void saveUserProfile(FirebaseUser user) {
         String userId = user.getUid();
+        String ageStr = etAge.getText().toString().trim();
+        String weightStr = etWeight.getText().toString().trim();
+        String heightStr = etHeight.getText().toString().trim();
+        String fitnessLevel = spinnerFitnessLevel.getSelectedItem().toString();
+
+        // Build Bio-Profile from transformed registration data
+        BioProfile bioProfile = RegistrationMapper.INSTANCE.buildBioProfile(
+                ageStr.isEmpty() ? null : ageStr,
+                weightStr.isEmpty() ? null : weightStr,
+                heightStr.isEmpty() ? null : heightStr,
+                fitnessLevel);
 
         // Use user.getUid() as the document ID to link Auth and Firestore data
         Map<String, Object> profileData = new HashMap<>();
-        // profileData.put("username", username); // Removed saving separate username field
-        profileData.put("email", user.getEmail()); // Ensure Email is stored
-        profileData.put("age", etAge.getText().toString());
-        profileData.put("weight", etWeight.getText().toString());
-        profileData.put("height", etHeight.getText().toString());
-        profileData.put("fitness_level", spinnerFitnessLevel.getSelectedItem().toString());
+        profileData.put("email", user.getEmail());
+        profileData.put("age", ageStr);
+        profileData.put("weight", weightStr);
+        profileData.put("height", heightStr);
+        profileData.put("fitness_level", fitnessLevel);
+        profileData.put("bio_max_heart_rate", bioProfile.getMaxHeartRate());
+        profileData.put("bio_resting_bpm", bioProfile.getRestingBPM());
+        profileData.put("bio_energy_bias", bioProfile.getEnergyBias());
+        profileData.put("bio_algorithm_sensitivity", bioProfile.getAlgorithmSensitivity());
         profileData.put("created_at", System.currentTimeMillis());
 
         // Use set() and UID to create a unique document for this user
         db.collection("users").document(userId)
                 .set(profileData)
                 .addOnSuccessListener(aVoid -> {
-                    // Step 3: Save local preferences and navigate
+                    // Save Bio-Profile to local SharedPreferences
+                    BioProfileStorage.INSTANCE.save(prefs, bioProfile);
+                    BiometricFilter.INSTANCE.setBioProfile(bioProfile);
+                    BiometricFilter.INSTANCE.reset();
+
                     SharedPreferences.Editor editor = prefs.edit();
                     editor.putString("user_id", userId);
-                    // editor.putString("username", username); // Removed saving separate username to prefs
-                    editor.putString("email", user.getEmail()); // Ensure Email is saved
+                    editor.putString("email", user.getEmail());
                     editor.apply();
 
                     Toast.makeText(this, "Registration successful!", Toast.LENGTH_SHORT).show();
