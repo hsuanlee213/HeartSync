@@ -104,10 +104,7 @@ fun LoginScreen(
 
         WireframeLoginButton(
             isLoading = isLoading,
-            onClick = {
-                isLoading = true
-                onLoginClick()
-            }
+            onClick = { onLoginClick() }
         )
 
         Spacer(modifier = Modifier.height(20.dp))
