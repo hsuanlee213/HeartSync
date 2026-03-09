@@ -86,13 +86,6 @@ fun LoginScreen(
             color = ColdWhite
         )
 
-        Text(
-            text = "AUTHENTICATION PROTOCOL",
-            fontSize = 12.sp,
-            color = ColdWhite.copy(alpha = 0.7f),
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
         Spacer(modifier = Modifier.height(32.dp))
 
         Image(
@@ -126,7 +119,7 @@ fun LoginScreen(
         )
 
         Text(
-            text = "INITIATE NEW USER PROTOCOL",
+            text = "ACTIVATE YOUR PULSE",
             fontSize = 12.sp,
             color = ColdWhite,
             modifier = Modifier
