@@ -35,6 +35,32 @@ private fun ActivityMode.primaryColor(): Color = when (this) {
     ActivityMode.EXERCISE -> Color(0xFFD84315)
 }
 
+/**
+ * Isolated composable for pulse circle. Only this recomposes when scale changes,
+ * minimizing recomposition scope and reducing CPU/GPU load.
+ */
+@Composable
+private fun PulseCircle(
+    scale: Float,
+    color: Color,
+    modifier: Modifier = Modifier
+) {
+    Canvas(
+        modifier = modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                clip = false
+            }
+    ) {
+        drawCircle(
+            color = color,
+            radius = size.minDimension / 2f,
+            center = center
+        )
+    }
+}
+
 private fun ActivityMode.scaleRange(): Pair<Float, Float> = when (this) {
     ActivityMode.CALM -> 0.85f to 1.2f
     ActivityMode.DRIVING -> 0.82f to 1.22f
@@ -85,7 +111,7 @@ fun HeartSyncBpmContent(
     LaunchedEffect(currentMode) {
         scale.snapTo(scaleMin)
         while (true) {
-            val duration = (60000 / updatedHeartRate.value.coerceAtLeast(1)).toInt()
+            val duration = bpmToDurationMs(updatedHeartRate.value)
             scale.animateTo(
                 targetValue = scaleMax,
                 animationSpec = tween(durationMillis = duration)
@@ -113,21 +139,11 @@ fun HeartSyncBpmContent(
                 .padding(8.dp)
                 .size(56.dp)
         ) {
-            Canvas(
-                modifier = Modifier
-                    .size(56.dp)
-                    .graphicsLayer {
-                        scaleX = scale.value
-                        scaleY = scale.value
-                        clip = false
-                    }
-            ) {
-                drawCircle(
-                    color = circleColor,
-                    radius = size.minDimension / 2f,
-                    center = center
-                )
-            }
+            PulseCircle(
+                scale = scale.value,
+                color = circleColor,
+                modifier = Modifier.size(56.dp)
+            )
             AnimatedContent(
                 targetState = heartRate,
                 transitionSpec = {

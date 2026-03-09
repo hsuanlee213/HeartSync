@@ -84,7 +84,7 @@ fun DynamicVisualizerPulse(
     circleColor: Color = Color.White.copy(alpha = 0.6f)
 ) {
     val scale = remember { Animatable(0.9f) }
-    val durationMillis = (60000 / currentBpm.coerceAtLeast(1)).toInt()
+    val durationMillis = bpmToDurationMs(currentBpm)
 
     LaunchedEffect(currentBpm) {
         while (true) {
