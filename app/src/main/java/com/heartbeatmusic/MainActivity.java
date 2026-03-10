@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -27,8 +28,12 @@ import com.heartbeatmusic.biometric.BiometricFilter;
 import com.heartbeatmusic.terminal.ArchiveFragment;
 import com.heartbeatmusic.terminal.SettingsFragment;
 import com.heartbeatmusic.terminal.TerminalFragment;
+import com.heartbeatmusic.data.remote.LibraryRepository;
+import com.heartbeatmusic.data.model.Song;
 import com.heartbeatmusic.terminal.TerminalMode;
 import com.heartbeatmusic.terminal.TerminalModeHolder;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -42,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private Button btnPlayPause;
     private BottomNavigationView bottomNav;
     private ExoPlayer player;
+    private LibraryRepository libraryRepository = new LibraryRepository();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,6 +103,15 @@ public class MainActivity extends AppCompatActivity {
                     if (tvPlaybackTitle != null) tvPlaybackTitle.setText(title);
                 });
             }
+
+            @Override
+            public void onIsPlayingChanged(boolean isPlaying) {
+                runOnUiThread(() -> {
+                    if (btnPlayPause != null) {
+                        btnPlayPause.setText(isPlaying ? "Pause" : "Play");
+                    }
+                });
+            }
         });
     }
 
@@ -104,10 +119,60 @@ public class MainActivity extends AppCompatActivity {
         btnPlayPause.setOnClickListener(v -> {
             if (player.isPlaying()) {
                 player.pause();
-                btnPlayPause.setText("Play");
-            } else {
+                return;
+            }
+            if (player.getCurrentMediaItem() != null) {
                 player.play();
-                btnPlayPause.setText("Pause");
+                return;
+            }
+            loadAndPlayFirstSong();
+        });
+    }
+
+    private void loadAndPlayFirstSong() {
+        libraryRepository.getAllSongs(new LibraryRepository.SongsCallback() {
+            @Override
+            public void onSuccess(List<Song> songs) {
+                runOnUiThread(() -> {
+                    if (songs == null || songs.isEmpty()) {
+                        Toast.makeText(MainActivity.this,
+                                R.string.no_songs_available,
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    Song song = songs.get(0);
+                    String url = song.getAudioUrl();
+                    String title = song.getTitle();
+                    String artist = song.getArtist();
+                    if (url == null || url.isEmpty()) {
+                        Toast.makeText(MainActivity.this,
+                                R.string.no_songs_available,
+                                Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+                    String displayTitle = (title != null && !title.isEmpty()) ? title : "Unknown";
+                    String displayArtist = (artist != null && !artist.isEmpty()) ? artist : "Unknown";
+                    MediaItem mediaItem = new MediaItem.Builder()
+                            .setUri(Uri.parse(url))
+                            .setMediaMetadata(
+                                    new MediaMetadata.Builder()
+                                            .setTitle(displayTitle)
+                                            .setArtist(displayArtist)
+                                            .build())
+                            .build();
+                    player.setMediaItem(mediaItem);
+                    player.prepare();
+                    player.play();
+                    tvPlaybackTitle.setText(displayTitle);
+                    btnPlayPause.setText("Pause");
+                });
+            }
+
+            @Override
+            public void onError(Exception e) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this,
+                        "Failed to load songs: " + (e != null ? e.getMessage() : "Unknown"),
+                        Toast.LENGTH_SHORT).show());
             }
         });
     }
@@ -256,10 +321,14 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         String username = prefs.getString("username", "U");
         tvUsername.setText(getInitials(username));
-        if (player != null && player.getCurrentMediaItem() != null) {
-            MediaMetadata md = player.getCurrentMediaItem().mediaMetadata;
-            String title = (md != null && md.title != null) ? md.title.toString() : "Not playing";
-            tvPlaybackTitle.setText(title);
+        if (player != null) {
+            if (player.getCurrentMediaItem() != null) {
+                MediaMetadata md = player.getCurrentMediaItem().mediaMetadata;
+                String title = (md != null && md.title != null) ? md.title.toString() : "Not playing";
+                tvPlaybackTitle.setText(title);
+            } else {
+                tvPlaybackTitle.setText("Not playing");
+            }
             btnPlayPause.setText(player.isPlaying() ? "Pause" : "Play");
         }
     }
