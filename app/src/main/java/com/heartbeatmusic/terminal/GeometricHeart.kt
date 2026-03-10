@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Card
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -77,6 +78,7 @@ fun GeometricHeartContent(
 ) {
     val currentBpm by viewModel.currentHeartRate.collectAsStateWithLifecycle()
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.syncPlaybackState() }
     val currentTrackTitle by viewModel.currentTrackTitle.collectAsStateWithLifecycle()
     val mode by TerminalModeHolder.selectedMode.collectAsStateWithLifecycle()
     val strokeColor = mode.strokeColor()
@@ -201,6 +203,7 @@ fun GeometricHeartContent(
         // MusicInfoContainer: album art + marquee (between heart and BPM)
         MusicInfoContainer(
             trackTitle = currentTrackTitle,
+            isMusicPlaying = isMusicPlaying,
             modifier = Modifier
                 .padding(top = 12.dp)
                 .graphicsLayer { alpha = musicInfoAlpha }
@@ -223,6 +226,7 @@ fun GeometricHeartContent(
 @Composable
 private fun MusicInfoContainer(
     trackTitle: String,
+    isMusicPlaying: Boolean,
     modifier: Modifier = Modifier
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "album")
@@ -241,25 +245,31 @@ private fun MusicInfoContainer(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
     ) {
-        // Rotating album cover with cyan glow ring
-        Box(
+        // Rotating album cover: Card + CircleShape, rotates only when playing
+        Card(
+            shape = CircleShape,
+            colors = androidx.compose.material3.CardDefaults.cardColors(
+                containerColor = Color(0xFF2A2A2A)
+            ),
             modifier = Modifier
                 .size(48.dp)
-                .graphicsLayer { rotationZ = rotation }
-                .clip(CircleShape)
+                .graphicsLayer { rotationZ = if (isMusicPlaying) rotation else 0f }
                 .drawWithContent {
                     drawCircle(color = CyanGlow.copy(alpha = 0.25f), radius = size.minDimension / 2 + 4)
-                    drawCircle(color = Color(0xFF2A2A2A), radius = size.minDimension / 2)
                     drawContent()
-                },
-            contentAlignment = Alignment.Center
+                }
         ) {
-            Image(
-                painter = painterResource(R.drawable.ic_music_note),
-                contentDescription = null,
-                modifier = Modifier.size(24.dp),
-                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(CyanGlow)
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_music_note),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(CyanGlow)
+                )
+            }
         }
         Spacer(modifier = Modifier.padding(horizontal = 12.dp))
         androidx.compose.material3.Text(

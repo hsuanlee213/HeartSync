@@ -7,6 +7,7 @@ import com.heartbeatmusic.PlayerHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -43,16 +44,30 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private fun observePlaybackState() {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
-                _isMusicPlaying.value = isPlaying
+                viewModelScope.launch(Dispatchers.Main.immediate) {
+                    _isMusicPlaying.value = isPlaying
+                }
             }
 
             override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
                 val title = mediaItem?.mediaMetadata?.title?.toString() ?: ""
-                _currentTrackTitle.value = title
+                viewModelScope.launch(Dispatchers.Main.immediate) {
+                    _currentTrackTitle.value = title
+                }
             }
         })
-        _isMusicPlaying.value = player.isPlaying
-        _currentTrackTitle.value = player.currentMediaItem?.mediaMetadata?.title?.toString() ?: ""
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            _isMusicPlaying.value = player.isPlaying
+            _currentTrackTitle.value = player.currentMediaItem?.mediaMetadata?.title?.toString() ?: ""
+        }
+    }
+
+    /** Sync playback state from player (e.g. when UI becomes visible). */
+    fun syncPlaybackState() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            _isMusicPlaying.value = player.isPlaying
+            _currentTrackTitle.value = player.currentMediaItem?.mediaMetadata?.title?.toString() ?: ""
+        }
     }
 
     private fun collectHeartRate() {
