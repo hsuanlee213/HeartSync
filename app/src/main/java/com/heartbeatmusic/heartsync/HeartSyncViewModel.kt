@@ -2,10 +2,15 @@ package com.heartbeatmusic.heartsync
 
 import android.net.Uri
 import android.app.Application
+import android.util.Log
+import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.heartbeatmusic.PlayerHolder
 import com.heartbeatmusic.data.model.Song
+import com.heartbeatmusic.terminal.TerminalMode
+import com.heartbeatmusic.terminal.TerminalModeHolder
+import com.heartbeatmusic.terminal.toActivityMode
 import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,6 +25,38 @@ import kotlinx.coroutines.launch
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
+
+private const val TAG = "HeartSync"
+
+/** Mock song for testing per AppMode. */
+data class MockSong(
+    val title: String,
+    val artist: String,
+    val firstTag: String,
+    val coverColor: Color
+)
+
+/** Mock song database per AppMode. */
+private val MOCK_SONGS: Map<TerminalMode, MockSong> = mapOf(
+    TerminalMode.ZEN to MockSong(
+        title = "Deep Meditation (Mock)",
+        artist = "Zen Master",
+        firstTag = "#Ambient",
+        coverColor = Color(0xFF4A148C)
+    ),
+    TerminalMode.SYNC to MockSong(
+        title = "Digital Flow (Mock)",
+        artist = "Sync Project",
+        firstTag = "#DeepHouse",
+        coverColor = Color(0xFF00FFFF)
+    ),
+    TerminalMode.OVERDRIVE to MockSong(
+        title = "System Overload (Mock)",
+        artist = "Kinetic Band",
+        firstTag = "#Techno",
+        coverColor = Color(0xFFFF4500)
+    )
+)
 
 /**
  * HeartSync ViewModel.
@@ -54,6 +91,19 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _playbackProgress = MutableStateFlow(0f)
     val playbackProgress: StateFlow<Float> = _playbackProgress.asStateFlow()
 
+    /** Display song (mock when no real track or when mode changes). */
+    private val _displayTitle = MutableStateFlow("")
+    val displayTitle: StateFlow<String> = _displayTitle.asStateFlow()
+
+    private val _displayArtist = MutableStateFlow("")
+    val displayArtist: StateFlow<String> = _displayArtist.asStateFlow()
+
+    private val _displayFirstTag = MutableStateFlow("")
+    val displayFirstTag: StateFlow<String> = _displayFirstTag.asStateFlow()
+
+    private val _displayCoverColor = MutableStateFlow<Color?>(null)
+    val displayCoverColor: StateFlow<Color?> = _displayCoverColor.asStateFlow()
+
     private val player = PlayerHolder.getInstance(application).getPlayer()
     private val libraryRepository = LibraryRepository()
     private var progressJob: Job? = null
@@ -80,6 +130,12 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     _currentTrackArtist.value = md?.artist?.toString() ?: ""
                     _currentCoverUrl.value = md?.artworkUri?.toString()
                     _isPanelExpanded.value = mediaItem != null
+                    if (mediaItem != null) {
+                        _displayTitle.value = md?.title?.toString() ?: ""
+                        _displayArtist.value = md?.artist?.toString() ?: ""
+                        _displayFirstTag.value = ""
+                        _displayCoverColor.value = null
+                    }
                 }
             }
         })
@@ -122,6 +178,12 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentTrackArtist.value = md?.artist?.toString() ?: ""
             _currentCoverUrl.value = md?.artworkUri?.toString()
             _isPanelExpanded.value = mediaItem != null
+            if (mediaItem != null) {
+                _displayTitle.value = md?.title?.toString() ?: ""
+                _displayArtist.value = md?.artist?.toString() ?: ""
+                _displayFirstTag.value = ""
+                _displayCoverColor.value = null
+            }
             if (player.isPlaying) startProgressUpdates()
         }
     }
@@ -167,6 +229,8 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     private fun loadAndPlayFirstSong() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
+            setTerminalMode(TerminalModeHolder.getCurrentMode())
+            _isPanelExpanded.value = true
             libraryRepository.getAllSongs(
                 object : LibraryRepository.SongsCallback {
                     override fun onSuccess(songs: List<Song>?) {
@@ -193,6 +257,10 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                             player.prepare()
                             player.play()
                             _isPanelExpanded.value = true
+                            _displayTitle.value = title
+                            _displayArtist.value = artist
+                            _displayFirstTag.value = ""
+                            _displayCoverColor.value = null
                         }
                     }
                     override fun onError(e: Exception?) {}
@@ -201,7 +269,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /** Stop playback and clear media. Collapses the panel. */
+    /** Stop playback and clear media. Collapses the panel. Resets to initial state. */
     fun stop() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
             player.stop()
@@ -211,6 +279,10 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentTrackTitle.value = ""
             _currentTrackArtist.value = ""
             _currentCoverUrl.value = null
+            _displayTitle.value = ""
+            _displayArtist.value = ""
+            _displayFirstTag.value = ""
+            _displayCoverColor.value = null
             _playbackProgress.value = 0f
             stopProgressUpdates()
         }
@@ -255,6 +327,21 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         if (heartRateProvider is MockHeartRateProvider) {
             heartRateProvider.setMode(mode)
         }
+    }
+
+    /**
+     * Switch Terminal mode. Updates display to mock song and logs.
+     */
+    fun setTerminalMode(mode: TerminalMode) {
+        setMode(mode.toActivityMode())
+        val mock = MOCK_SONGS[mode] ?: return
+        _displayTitle.value = mock.title
+        _displayArtist.value = mock.artist
+        _displayFirstTag.value = mock.firstTag
+        _displayCoverColor.value = mock.coverColor
+        val tags = mode.musicTags
+        val bpm = _currentHeartRate.value
+        Log.i(TAG, "Mode Changed: $mode, Fetching Tags: $tags, Target BPM: $bpm")
     }
 
     override fun onCleared() {

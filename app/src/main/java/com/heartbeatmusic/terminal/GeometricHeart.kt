@@ -1,8 +1,10 @@
 package com.heartbeatmusic.terminal
 
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
@@ -17,6 +19,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -71,10 +74,6 @@ import com.heartbeatmusic.R
 import com.heartbeatmusic.heartsync.HeartSyncViewModel
 import kotlin.math.sin
 
-private val CyanGlow = Color(0xFF00FFFF)
-private val ZenPurple = Color(0xFFE0B0FF)
-private val OverdriveCyan = Color(0xFF40FFFF)
-private val PanelAccent = Color(0xFF6366F1)
 private val StopRed = Color(0xFFEF4444)
 private val PanelBg = Color(0xFF1A1A2E)
 private val SliderInactive = Color(0xFF333333)
@@ -84,12 +83,6 @@ private val COLLAPSED_PANEL_HEIGHT = 72.dp
 private fun bpmToDurationMs(bpm: Int): Int = when {
     bpm <= 0 -> 1000
     else -> (60000 / bpm).coerceIn(300, 2000)
-}
-
-private fun TerminalMode.strokeColor(): Color = when (this) {
-    TerminalMode.ZEN -> ZenPurple
-    TerminalMode.SYNC -> CyanGlow
-    TerminalMode.OVERDRIVE -> OverdriveCyan
 }
 
 private fun TerminalMode.breathMultiplier(): Float = when (this) {
@@ -106,14 +99,22 @@ fun GeometricHeartContent(
     val currentBpm by viewModel.currentHeartRate.collectAsStateWithLifecycle()
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsStateWithLifecycle()
     val isPanelExpanded by viewModel.isPanelExpanded.collectAsStateWithLifecycle()
-    LaunchedEffect(Unit) { viewModel.syncPlaybackState() }
-    val currentTrackTitle by viewModel.currentTrackTitle.collectAsStateWithLifecycle()
-    val currentTrackArtist by viewModel.currentTrackArtist.collectAsStateWithLifecycle()
-    val currentCoverUrl by viewModel.currentCoverUrl.collectAsStateWithLifecycle()
-    val playbackProgress by viewModel.playbackProgress.collectAsStateWithLifecycle()
     val mode by TerminalModeHolder.selectedMode.collectAsStateWithLifecycle()
-    val strokeColor = mode.strokeColor()
+    val currentCoverUrl by viewModel.currentCoverUrl.collectAsStateWithLifecycle()
+    val displayTitle by viewModel.displayTitle.collectAsStateWithLifecycle()
+    val displayArtist by viewModel.displayArtist.collectAsStateWithLifecycle()
+    val displayFirstTag by viewModel.displayFirstTag.collectAsStateWithLifecycle()
+    val displayCoverColor by viewModel.displayCoverColor.collectAsStateWithLifecycle()
+    val playbackProgress by viewModel.playbackProgress.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.syncPlaybackState() }
+    LaunchedEffect(mode) { viewModel.setTerminalMode(mode) }
     val breathMult = mode.breathMultiplier()
+
+    val accentColor by animateColorAsState(
+        targetValue = mode.accentColor,
+        animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
+        label = "accentColor"
+    )
 
     val heartOffsetY by animateDpAsState(
         targetValue = if (isPanelExpanded) (-48).dp else 0.dp,
@@ -134,19 +135,27 @@ fun GeometricHeartContent(
     val heartScale = remember { Animatable(1f) }
     val updatedBpm = rememberUpdatedState(currentBpm.coerceAtLeast(1))
 
+    val zenEasing = LinearOutSlowInEasing
+    val syncEasing = FastOutSlowInEasing
+
     LaunchedEffect(mode, currentBpm) {
         while (true) {
             val cycleMs = (bpmToDurationMs(updatedBpm.value) * breathMult).toInt().coerceAtLeast(500)
+            val easing = when (mode) {
+                TerminalMode.ZEN -> zenEasing
+                TerminalMode.SYNC -> syncEasing
+                TerminalMode.OVERDRIVE -> syncEasing
+            }
             heartScale.animateTo(
                 targetValue = 1.12f,
                 animationSpec = keyframes {
                     durationMillis = cycleMs
-                    1f at 0
-                    1.1f at (cycleMs * 0.08f).toInt()
-                    1.02f at (cycleMs * 0.2f).toInt()
-                    1.1f at (cycleMs * 0.3f).toInt()
-                    1.02f at (cycleMs * 0.4f).toInt()
-                    1f at cycleMs
+                    1f at 0 using easing
+                    1.1f at (cycleMs * 0.08f).toInt() using easing
+                    1.02f at (cycleMs * 0.2f).toInt() using easing
+                    1.1f at (cycleMs * 0.3f).toInt() using easing
+                    1.02f at (cycleMs * 0.4f).toInt() using easing
+                    1f at cycleMs using easing
                 }
             )
         }
@@ -216,13 +225,13 @@ fun GeometricHeartContent(
                                 .align(Alignment.CenterStart)
                                 .padding(start = 8.dp)
                                 .graphicsLayer { alpha = visualizerAlpha },
-                            isActive = isMusicPlaying
+                            isActive = isMusicPlaying,
+                            accentColor = accentColor
                         )
 
                         Image(
                             painter = painterResource(R.drawable.login_logo_remove_background),
                             contentDescription = null,
-                            contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxWidth(0.55f)
                                 .graphicsLayer {
@@ -230,7 +239,9 @@ fun GeometricHeartContent(
                                     scaleY = effectiveScale
                                     translationX = tremorX
                                     translationY = tremorY
-                                }
+                                },
+                            contentScale = ContentScale.Fit,
+                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accentColor)
                         )
 
                         SideVisualizer(
@@ -238,7 +249,8 @@ fun GeometricHeartContent(
                                 .align(Alignment.CenterEnd)
                                 .padding(end = 8.dp)
                                 .graphicsLayer { alpha = visualizerAlpha },
-                            isActive = isMusicPlaying
+                            isActive = isMusicPlaying,
+                            accentColor = accentColor
                         )
                     }
 
@@ -247,7 +259,7 @@ fun GeometricHeartContent(
                         text = currentBpm.toString(),
                         fontFamily = FontFamily.Monospace,
                         fontSize = 32.sp,
-                        color = strokeColor,
+                        color = accentColor,
                         modifier = Modifier.padding(top = 16.dp)
                     )
                 }
@@ -265,12 +277,12 @@ fun GeometricHeartContent(
                     .then(
                         Modifier.drawWithContent {
                             drawContent()
-                            // Top edge gradient: transparent -> cyan -> transparent
+                            // Top edge gradient: transparent -> accent -> transparent
                             drawRect(
                                 brush = Brush.horizontalGradient(
                                     listOf(
                                         Color.Transparent,
-                                        CyanGlow,
+                                        accentColor,
                                         Color.Transparent
                                     )
                                 ),
@@ -297,19 +309,22 @@ fun GeometricHeartContent(
                 ) { expanded ->
                     if (expanded) {
                         ExpandedPanel(
-                            trackTitle = currentTrackTitle,
-                            artistName = currentTrackArtist,
+                            trackTitle = displayTitle,
+                            artistName = displayArtist,
+                            firstTag = displayFirstTag,
                             coverUrl = currentCoverUrl,
+                            coverColor = displayCoverColor,
                             progress = playbackProgress,
                             onProgressChange = { viewModel.seekToProgress(it) },
                             onPrevious = { viewModel.previous() },
                             onPlayPause = { viewModel.playPause() },
                             onNext = { viewModel.next() },
                             onStop = { viewModel.stop() },
-                            isPlaying = isMusicPlaying
+                            isPlaying = isMusicPlaying,
+                            accentColor = accentColor
                         )
                     } else {
-                        CollapsedPanel(onPlayClick = { viewModel.playPause() })
+                        CollapsedPanel(onPlayClick = { viewModel.playPause() }, accentColor = accentColor)
                     }
                 }
             }
@@ -318,7 +333,7 @@ fun GeometricHeartContent(
 }
 
 @Composable
-private fun CollapsedPanel(onPlayClick: () -> Unit) {
+private fun CollapsedPanel(onPlayClick: () -> Unit, accentColor: Color) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -332,7 +347,7 @@ private fun CollapsedPanel(onPlayClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
                 contentDescription = "Play",
-                tint = CyanGlow,
+                tint = accentColor,
                 modifier = Modifier.size(40.dp)
             )
         }
@@ -343,14 +358,17 @@ private fun CollapsedPanel(onPlayClick: () -> Unit) {
 private fun ExpandedPanel(
     trackTitle: String,
     artistName: String,
+    firstTag: String,
     coverUrl: String?,
+    coverColor: Color?,
     progress: Float,
     onProgressChange: (Float) -> Unit,
     onPrevious: () -> Unit,
     onPlayPause: () -> Unit,
     onNext: () -> Unit,
     onStop: () -> Unit,
-    isPlaying: Boolean
+    isPlaying: Boolean,
+    accentColor: Color
 ) {
     Column(
         modifier = Modifier
@@ -358,30 +376,35 @@ private fun ExpandedPanel(
             .padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Progress Slider at top: cyan active, dark gray inactive, smaller thumb
+        // Progress Slider: mode accent color
         Slider(
             value = progress,
             onValueChange = onProgressChange,
             modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
-                thumbColor = CyanGlow,
-                activeTrackColor = CyanGlow,
+                thumbColor = accentColor,
+                activeTrackColor = accentColor,
                 inactiveTrackColor = SliderInactive
             )
         )
 
-        // Middle: Row with album art (cyan border), song name (Bold), artist
+        // Middle: Row with album art (accent border), song name (Bold), artist
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // AlbumArt: circular with 1.dp cyan border
+            // AlbumArt: circular with 1.dp accent border, coverColor when no coverUrl
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .border(1.dp, CyanGlow, CircleShape)
+                    .then(
+                        if (coverColor != null && (coverUrl == null || coverUrl.isEmpty())) {
+                            Modifier.background(coverColor)
+                        } else Modifier
+                    )
+                    .border(1.dp, accentColor, CircleShape)
                     .drawWithContent {
                         drawContent()
                     },
@@ -399,15 +422,15 @@ private fun ExpandedPanel(
                         painter = painterResource(R.drawable.ic_music_note),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(CyanGlow)
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accentColor)
                     )
                 }
             }
 
-            // Song title (White) + artist (LightGray)
+            // Song title (White) + artist (LightGray) + Tag Chip
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 androidx.compose.material3.Text(
                     text = trackTitle.ifEmpty { "Not playing" },
@@ -417,13 +440,32 @@ private fun ExpandedPanel(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                androidx.compose.material3.Text(
-                    text = artistName.ifEmpty { "" },
-                    fontSize = 12.sp,
-                    color = Color.LightGray.copy(alpha = 0.7f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    androidx.compose.material3.Text(
+                        text = artistName.ifEmpty { "" },
+                        fontSize = 12.sp,
+                        color = Color.LightGray.copy(alpha = 0.7f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (firstTag.isNotEmpty()) {
+                        androidx.compose.material3.Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color.Transparent,
+                            border = BorderStroke(1.dp, accentColor)
+                        ) {
+                            androidx.compose.material3.Text(
+                                text = firstTag,
+                                fontSize = 10.sp,
+                                color = accentColor,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -446,7 +488,7 @@ private fun ExpandedPanel(
                     Icon(
                         imageVector = Icons.Filled.Stop,
                         contentDescription = "Stop",
-                        tint = CyanGlow,
+                        tint = accentColor,
                         modifier = Modifier.size(32.dp)
                     )
                 }
@@ -455,7 +497,7 @@ private fun ExpandedPanel(
                 Icon(
                     imageVector = Icons.Filled.SkipPrevious,
                     contentDescription = "Previous",
-                    tint = CyanGlow,
+                    tint = accentColor,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -463,7 +505,7 @@ private fun ExpandedPanel(
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = CyanGlow,
+                    tint = accentColor,
                     modifier = Modifier.size(40.dp)
                 )
             }
@@ -471,7 +513,7 @@ private fun ExpandedPanel(
                 Icon(
                     imageVector = Icons.Filled.SkipNext,
                     contentDescription = "Next",
-                    tint = CyanGlow,
+                    tint = accentColor,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -482,7 +524,8 @@ private fun ExpandedPanel(
 @Composable
 private fun SideVisualizer(
     modifier: Modifier = Modifier,
-    isActive: Boolean
+    isActive: Boolean,
+    accentColor: Color = Color(0xFF00FFFF)
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "viz")
     val phase by infiniteTransition.animateFloat(
@@ -503,7 +546,7 @@ private fun SideVisualizer(
         for (i in 0 until barCount) {
             val h = (sin(phase * 6.28f + i * 1.2f) * 0.5f + 0.5f) * 30f + 8f
             drawRect(
-                color = CyanGlow.copy(alpha = 0.6f),
+                color = accentColor.copy(alpha = 0.6f),
                 topLeft = Offset(i * (barWidth * 2), centerY - h / 2),
                 size = androidx.compose.ui.geometry.Size(barWidth.coerceAtLeast(1f), h)
             )

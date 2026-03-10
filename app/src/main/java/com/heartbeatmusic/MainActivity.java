@@ -148,34 +148,29 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupModeSwitcher() {
-        MaterialButton btnZen = findViewById(R.id.btn_mode_zen);
-        MaterialButton btnSync = findViewById(R.id.btn_mode_sync);
-        MaterialButton btnOverdrive = findViewById(R.id.btn_mode_overdrive);
+        com.google.android.material.button.MaterialButtonToggleGroup toggleGroup =
+                findViewById(R.id.mode_switcher_root);
 
         updateModeButtonStyles(TerminalModeHolder.INSTANCE.getCurrentMode());
 
-        btnZen.setOnClickListener(v -> {
-            TerminalModeHolder.INSTANCE.setMode(TerminalMode.ZEN);
-            updateModeButtonStyles(TerminalMode.ZEN);
-        });
-        btnSync.setOnClickListener(v -> {
-            TerminalModeHolder.INSTANCE.setMode(TerminalMode.SYNC);
-            updateModeButtonStyles(TerminalMode.SYNC);
-        });
-        btnOverdrive.setOnClickListener(v -> {
-            TerminalModeHolder.INSTANCE.setMode(TerminalMode.OVERDRIVE);
-            updateModeButtonStyles(TerminalMode.OVERDRIVE);
+        toggleGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (!isChecked) return;
+            if (checkedId == R.id.btn_mode_zen) {
+                TerminalModeHolder.INSTANCE.setMode(TerminalMode.ZEN);
+            } else if (checkedId == R.id.btn_mode_sync) {
+                TerminalModeHolder.INSTANCE.setMode(TerminalMode.SYNC);
+            } else if (checkedId == R.id.btn_mode_overdrive) {
+                TerminalModeHolder.INSTANCE.setMode(TerminalMode.OVERDRIVE);
+            }
         });
     }
 
     private void updateModeButtonStyles(TerminalMode mode) {
-        MaterialButton btnZen = findViewById(R.id.btn_mode_zen);
-        MaterialButton btnSync = findViewById(R.id.btn_mode_sync);
-        MaterialButton btnOverdrive = findViewById(R.id.btn_mode_overdrive);
-
-        btnZen.setChecked(mode == TerminalMode.ZEN);
-        btnSync.setChecked(mode == TerminalMode.SYNC);
-        btnOverdrive.setChecked(mode == TerminalMode.OVERDRIVE);
+        com.google.android.material.button.MaterialButtonToggleGroup toggleGroup =
+                findViewById(R.id.mode_switcher_root);
+        int checkedId = mode == TerminalMode.ZEN ? R.id.btn_mode_zen
+                : mode == TerminalMode.SYNC ? R.id.btn_mode_sync : R.id.btn_mode_overdrive;
+        toggleGroup.check(checkedId);
     }
 
     private void showFragment(String tag) {
@@ -221,5 +216,6 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         String username = prefs.getString("username", "U");
         tvUsername.setText(getInitials(username));
+        updateModeButtonStyles(TerminalModeHolder.INSTANCE.getCurrentMode());
     }
 }
