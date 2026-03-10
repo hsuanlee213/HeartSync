@@ -1,9 +1,12 @@
 package com.heartbeatmusic.heartsync
 
+import android.net.Uri
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.heartbeatmusic.PlayerHolder
+import com.heartbeatmusic.data.model.Song
+import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +17,8 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 
 /**
@@ -46,6 +51,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     val playbackProgress: StateFlow<Float> = _playbackProgress.asStateFlow()
 
     private val player = PlayerHolder.getInstance(application).getPlayer()
+    private val libraryRepository = LibraryRepository()
     private var progressJob: Job? = null
 
     init {
@@ -133,6 +139,101 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
      */
     fun stopMonitoring() {
         heartRateProvider.stopMonitoring()
+    }
+
+    /** Play or pause playback. Loads first song if no media. */
+    fun playPause() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            if (player.isPlaying) {
+                player.pause()
+            } else {
+                if (player.currentMediaItem == null) {
+                    loadAndPlayFirstSong()
+                } else {
+                    player.play()
+                }
+            }
+        }
+    }
+
+    private fun loadAndPlayFirstSong() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            libraryRepository.getAllSongs(
+                object : LibraryRepository.SongsCallback {
+                    override fun onSuccess(songs: List<Song>?) {
+                        viewModelScope.launch(Dispatchers.Main.immediate) {
+                            val list = songs ?: emptyList()
+                            if (list.isEmpty()) return@launch
+                            val song = list[0]
+                            val url = song.audioUrl ?: return@launch
+                            if (url.isEmpty()) return@launch
+                            val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
+                            val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
+                            val coverUrl = song.coverUrl
+                            val mediaItem = MediaItem.Builder()
+                                .setUri(Uri.parse(url))
+                                .setMediaMetadata(
+                                    MediaMetadata.Builder()
+                                        .setTitle(title)
+                                        .setArtist(artist)
+                                        .setArtworkUri(coverUrl?.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) })
+                                        .build()
+                                )
+                                .build()
+                            player.setMediaItem(mediaItem)
+                            player.prepare()
+                            player.play()
+                        }
+                    }
+                    override fun onError(e: Exception?) {}
+                }
+            )
+        }
+    }
+
+    /** Stop playback and clear media. Collapses the panel. */
+    fun stop() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            player.stop()
+            player.clearMediaItems()
+            _isMusicPlaying.value = false
+            _currentTrackTitle.value = ""
+            _currentTrackArtist.value = ""
+            _currentCoverUrl.value = null
+            _playbackProgress.value = 0f
+            stopProgressUpdates()
+        }
+    }
+
+    /** Go to previous track or restart current. */
+    fun previous() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            if (player.hasPreviousMediaItem()) {
+                player.seekToPrevious()
+            } else {
+                player.seekTo(0)
+            }
+        }
+    }
+
+    /** Go to next track. */
+    fun next() {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            if (player.hasNextMediaItem()) {
+                player.seekToNext()
+            }
+        }
+    }
+
+    /** Seek to position (0f..1f). */
+    fun seekToProgress(progress: Float) {
+        viewModelScope.launch(Dispatchers.Main.immediate) {
+            val dur = player.duration
+            if (dur > 0) {
+                val pos = (progress * dur).toLong().coerceIn(0L, dur)
+                player.seekTo(pos)
+            }
+        }
     }
 
     /**

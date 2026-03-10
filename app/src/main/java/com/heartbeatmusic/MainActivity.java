@@ -4,9 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
-import android.widget.Button;
 import android.widget.TextView;
-import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -16,8 +14,6 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.media3.common.MediaItem;
 import androidx.media3.common.MediaMetadata;
-import androidx.media3.common.Player;
-import androidx.media3.exoplayer.ExoPlayer;
 
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -28,12 +24,8 @@ import com.heartbeatmusic.biometric.BiometricFilter;
 import com.heartbeatmusic.terminal.ArchiveFragment;
 import com.heartbeatmusic.terminal.SettingsFragment;
 import com.heartbeatmusic.terminal.TerminalFragment;
-import com.heartbeatmusic.data.remote.LibraryRepository;
-import com.heartbeatmusic.data.model.Song;
 import com.heartbeatmusic.terminal.TerminalMode;
 import com.heartbeatmusic.terminal.TerminalModeHolder;
-
-import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -43,11 +35,7 @@ public class MainActivity extends AppCompatActivity {
 
     private SharedPreferences prefs;
     private TextView tvUsername;
-    private TextView tvPlaybackTitle;
-    private Button btnPlayPause;
     private BottomNavigationView bottomNav;
-    private ExoPlayer player;
-    private LibraryRepository libraryRepository = new LibraryRepository();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,13 +64,9 @@ public class MainActivity extends AppCompatActivity {
         });
 
         tvUsername = findViewById(R.id.tv_username);
-        tvPlaybackTitle = findViewById(R.id.tv_playback_title);
-        btnPlayPause = findViewById(R.id.btn_play_pause);
         bottomNav = findViewById(R.id.bottom_nav);
-        player = PlayerHolder.getInstance(this).getPlayer();
 
         setupProfileButton();
-        setupPlayback();
         setupToolbar();
         setupBottomNav();
         setupModeSwitcher();
@@ -92,92 +76,6 @@ public class MainActivity extends AppCompatActivity {
         }
 
         handleIntent(getIntent());
-
-        player.addListener(new Player.Listener() {
-            @Override
-            public void onMediaItemTransition(MediaItem mediaItem, int reason) {
-                if (mediaItem == null) return;
-                MediaMetadata md = mediaItem.mediaMetadata;
-                String title = (md != null && md.title != null) ? md.title.toString() : "Unknown";
-                runOnUiThread(() -> {
-                    if (tvPlaybackTitle != null) tvPlaybackTitle.setText(title);
-                });
-            }
-
-            @Override
-            public void onIsPlayingChanged(boolean isPlaying) {
-                runOnUiThread(() -> {
-                    if (btnPlayPause != null) {
-                        btnPlayPause.setText(isPlaying ? "Pause" : "Play");
-                    }
-                });
-            }
-        });
-    }
-
-    private void setupPlayback() {
-        btnPlayPause.setOnClickListener(v -> {
-            if (player.isPlaying()) {
-                player.pause();
-                return;
-            }
-            if (player.getCurrentMediaItem() != null) {
-                player.play();
-                return;
-            }
-            loadAndPlayFirstSong();
-        });
-    }
-
-    private void loadAndPlayFirstSong() {
-        libraryRepository.getAllSongs(new LibraryRepository.SongsCallback() {
-            @Override
-            public void onSuccess(List<Song> songs) {
-                runOnUiThread(() -> {
-                    if (songs == null || songs.isEmpty()) {
-                        Toast.makeText(MainActivity.this,
-                                R.string.no_songs_available,
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    Song song = songs.get(0);
-                    String url = song.getAudioUrl();
-                    String title = song.getTitle();
-                    String artist = song.getArtist();
-                    String coverUrl = song.getCoverUrl();
-                    if (url == null || url.isEmpty()) {
-                        Toast.makeText(MainActivity.this,
-                                R.string.no_songs_available,
-                                Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                    String displayTitle = (title != null && !title.isEmpty()) ? title : "Unknown";
-                    String displayArtist = (artist != null && !artist.isEmpty()) ? artist : "Unknown";
-                    MediaMetadata.Builder metaBuilder = new MediaMetadata.Builder()
-                            .setTitle(displayTitle)
-                            .setArtist(displayArtist);
-                    if (coverUrl != null && !coverUrl.isEmpty()) {
-                        metaBuilder.setArtworkUri(Uri.parse(coverUrl));
-                    }
-                    MediaItem mediaItem = new MediaItem.Builder()
-                            .setUri(Uri.parse(url))
-                            .setMediaMetadata(metaBuilder.build())
-                            .build();
-                    player.setMediaItem(mediaItem);
-                    player.prepare();
-                    player.play();
-                    tvPlaybackTitle.setText(displayTitle);
-                    btnPlayPause.setText("Pause");
-                });
-            }
-
-            @Override
-            public void onError(Exception e) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this,
-                        "Failed to load songs: " + (e != null ? e.getMessage() : "Unknown"),
-                        Toast.LENGTH_SHORT).show());
-            }
-        });
     }
 
     @Override
@@ -196,8 +94,8 @@ public class MainActivity extends AppCompatActivity {
         if (url != null && !url.isEmpty()) {
             String displayTitle = (title != null && !title.isEmpty()) ? title : "Unknown";
             String displayArtist = (artist != null && !artist.isEmpty()) ? artist : "Unknown";
-            tvPlaybackTitle.setText(displayTitle);
 
+            var player = PlayerHolder.getInstance(this).getPlayer();
             MediaItem mediaItem = new MediaItem.Builder()
                     .setUri(Uri.parse(url))
                     .setMediaMetadata(
@@ -209,7 +107,6 @@ public class MainActivity extends AppCompatActivity {
             player.setMediaItem(mediaItem);
             player.prepare();
             player.play();
-            btnPlayPause.setText("Pause");
         }
     }
 
@@ -324,15 +221,5 @@ public class MainActivity extends AppCompatActivity {
         super.onResume();
         String username = prefs.getString("username", "U");
         tvUsername.setText(getInitials(username));
-        if (player != null) {
-            if (player.getCurrentMediaItem() != null) {
-                MediaMetadata md = player.getCurrentMediaItem().mediaMetadata;
-                String title = (md != null && md.title != null) ? md.title.toString() : "Not playing";
-                tvPlaybackTitle.setText(title);
-            } else {
-                tvPlaybackTitle.setText("Not playing");
-            }
-            btnPlayPause.setText(player.isPlaying() ? "Pause" : "Play");
-        }
     }
 }

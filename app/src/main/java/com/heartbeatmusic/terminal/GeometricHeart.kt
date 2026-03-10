@@ -1,5 +1,6 @@
 package com.heartbeatmusic.terminal
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateDpAsState
@@ -9,11 +10,18 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,7 +30,18 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,6 +59,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -51,7 +71,10 @@ import kotlin.math.sin
 private val CyanGlow = Color(0xFF00FFFF)
 private val ZenPurple = Color(0xFFE0B0FF)
 private val OverdriveCyan = Color(0xFF40FFFF)
+private val PanelAccent = Color(0xFF6366F1) // Indigo for white panel contrast
+private val StopRed = Color(0xFFEF4444)
 private const val TRANSITION_MS = 500
+private val COLLAPSED_PANEL_HEIGHT = 72.dp
 
 private fun bpmToDurationMs(bpm: Int): Int = when {
     bpm <= 0 -> 1000
@@ -86,24 +109,20 @@ fun GeometricHeartContent(
     val strokeColor = mode.strokeColor()
     val breathMult = mode.breathMultiplier()
 
-    // Standby vs Active: heart offset & scale (500ms FastOutSlowInEasing)
+    val panelExpanded = isMusicPlaying
+
     val heartOffsetY by animateDpAsState(
-        targetValue = if (isMusicPlaying) (-60).dp else 0.dp,
+        targetValue = if (panelExpanded) (-48).dp else 0.dp,
         animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
         label = "heartOffset"
     )
     val heartBaseScale by animateFloatAsState(
-        targetValue = if (isMusicPlaying) 0.9f else 1f,
+        targetValue = if (panelExpanded) 0.9f else 1f,
         animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
         label = "heartScale"
     )
-    val musicInfoAlpha by animateFloatAsState(
-        targetValue = if (isMusicPlaying) 1f else 0f,
-        animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
-        label = "musicInfoAlpha"
-    )
     val visualizerAlpha by animateFloatAsState(
-        targetValue = if (isMusicPlaying) 1f else 0f,
+        targetValue = if (panelExpanded) 1f else 0f,
         animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
         label = "visualizerAlpha"
     )
@@ -154,151 +173,282 @@ fun GeometricHeartContent(
     val tremorY = if (mode == TerminalMode.OVERDRIVE) sin(jitterY * 6.28f + 1.5f) * 2f else 0f
     val effectiveScale = heartBaseScale * scaleWithJitter
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+    BoxWithConstraints(
+        modifier = modifier.fillMaxSize()
     ) {
-        // Heart + side visualizers
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            // Left visualizer
-            SideVisualizer(
-                modifier = Modifier
-                    .align(Alignment.CenterStart)
-                    .padding(start = 8.dp)
-                    .graphicsLayer { alpha = visualizerAlpha },
-                isActive = isMusicPlaying
-            )
+        val expandedHeightDp: Dp = maxHeight * 0.4f
 
-            // Heart image
-            Image(
-                painter = painterResource(R.drawable.login_logo_remove_background),
-                contentDescription = null,
-                contentScale = ContentScale.Fit,
-                modifier = Modifier
-                    .fillMaxWidth(0.55f)
-                    .offset(y = heartOffsetY)
-                    .graphicsLayer {
-                        scaleX = effectiveScale
-                        scaleY = effectiveScale
-                        translationX = tremorX
-                        translationY = tremorY
-                    }
-            )
-
-            // Right visualizer
-            SideVisualizer(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .padding(end = 8.dp)
-                    .graphicsLayer { alpha = visualizerAlpha },
-                isActive = isMusicPlaying
-            )
-        }
-
-        // Central info: AlbumArt, SongDetails, ProgressBar, BPM (alpha tied to isMusicPlaying)
-        CentralInfoColumn(
-            trackTitle = currentTrackTitle,
-            artistName = currentTrackArtist,
-            coverUrl = currentCoverUrl,
-            progress = playbackProgress,
-            currentBpm = currentBpm,
-            strokeColor = strokeColor,
-            modifier = Modifier
-                .padding(top = 16.dp)
-                .graphicsLayer { alpha = musicInfoAlpha }
+        val panelHeight by animateDpAsState(
+            targetValue = if (panelExpanded) expandedHeightDp else COLLAPSED_PANEL_HEIGHT,
+            animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
+            label = "panelHeight"
         )
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Heart + BPM in same Column (move together); no clip on container, 48dp top padding
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(top = 48.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.offset(y = heartOffsetY)
+                ) {
+                    // Heart + visualizers
+                    Box(
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        SideVisualizer(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .padding(start = 8.dp)
+                                .graphicsLayer { alpha = visualizerAlpha },
+                            isActive = panelExpanded
+                        )
+
+                        Image(
+                            painter = painterResource(R.drawable.login_logo_remove_background),
+                            contentDescription = null,
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .fillMaxWidth(0.55f)
+                                .graphicsLayer {
+                                    scaleX = effectiveScale
+                                    scaleY = effectiveScale
+                                    translationX = tremorX
+                                    translationY = tremorY
+                                }
+                        )
+
+                        SideVisualizer(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .padding(end = 8.dp)
+                                .graphicsLayer { alpha = visualizerAlpha },
+                            isActive = panelExpanded
+                        )
+                    }
+
+                    // BPM: 16dp below heart, moves with heart
+                    androidx.compose.material3.Text(
+                        text = currentBpm.toString(),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 32.sp,
+                        color = strokeColor,
+                        modifier = Modifier.padding(top = 16.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // MusicPlayerPanel: unified panel (collapsed = Play only, expanded = full controls)
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(panelHeight),
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
+                color = Color.White,
+                tonalElevation = 4.dp
+            ) {
+                AnimatedContent(
+                    targetState = panelExpanded,
+                    transitionSpec = {
+                        (fadeIn(tween(TRANSITION_MS)) + slideInVertically(
+                            animationSpec = tween(TRANSITION_MS),
+                            initialOffsetY = { it }
+                        )).togetherWith(
+                            fadeOut(tween(TRANSITION_MS)) + slideOutVertically(
+                                animationSpec = tween(TRANSITION_MS),
+                                targetOffsetY = { -it / 4 }
+                            )
+                        )
+                    },
+                    label = "panelContent"
+                ) { expanded ->
+                    if (expanded) {
+                        ExpandedPanel(
+                            trackTitle = currentTrackTitle,
+                            artistName = currentTrackArtist,
+                            coverUrl = currentCoverUrl,
+                            progress = playbackProgress,
+                            onProgressChange = { viewModel.seekToProgress(it) },
+                            onPrevious = { viewModel.previous() },
+                            onPlayPause = { viewModel.playPause() },
+                            onNext = { viewModel.next() },
+                            onStop = { viewModel.stop() },
+                            isPlaying = isMusicPlaying
+                        )
+                    } else {
+                        CollapsedPanel(onPlayClick = { viewModel.playPause() })
+                    }
+                }
+            }
+        }
     }
 }
 
 @Composable
-private fun CentralInfoColumn(
+private fun CollapsedPanel(onPlayClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        IconButton(
+            onClick = onPlayClick,
+            modifier = Modifier.size(56.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Filled.PlayArrow,
+                contentDescription = "Play",
+                tint = PanelAccent,
+                modifier = Modifier.size(40.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExpandedPanel(
     trackTitle: String,
     artistName: String,
     coverUrl: String?,
     progress: Float,
-    currentBpm: Int,
-    strokeColor: Color,
-    modifier: Modifier = Modifier
+    onProgressChange: (Float) -> Unit,
+    onPrevious: () -> Unit,
+    onPlayPause: () -> Unit,
+    onNext: () -> Unit,
+    onStop: () -> Unit,
+    isPlaying: Boolean
 ) {
     Column(
-        modifier = modifier.fillMaxWidth(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // AlbumArt: 80dp circular Image
-        Box(
+        // Progress Slider at top, full width, no padding (edge-to-edge)
+        Slider(
+            value = progress,
+            onValueChange = onProgressChange,
+            modifier = Modifier.fillMaxWidth(),
+            colors = SliderDefaults.colors(
+                thumbColor = PanelAccent,
+                activeTrackColor = PanelAccent,
+                inactiveTrackColor = PanelAccent.copy(alpha = 0.2f)
+            )
+        )
+
+        // Middle: Row with album art, song name (Bold), artist
+
+        Row(
             modifier = Modifier
-                .size(80.dp)
-                .clip(CircleShape)
-                .drawWithContent {
-                    drawCircle(color = CyanGlow.copy(alpha = 0.2f), radius = size.minDimension / 2 + 6)
-                    drawContent()
-                },
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            if (coverUrl != null && coverUrl.isNotEmpty()) {
-                AsyncImage(
-                    model = coverUrl,
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
+            // AlbumArt (small circular)
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .drawWithContent {
+                        drawCircle(color = PanelAccent.copy(alpha = 0.3f), radius = size.minDimension / 2 + 4)
+                        drawContent()
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                if (coverUrl != null && coverUrl.isNotEmpty()) {
+                    AsyncImage(
+                        model = coverUrl,
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(R.drawable.ic_music_note),
+                        contentDescription = null,
+                        modifier = Modifier.size(24.dp),
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(PanelAccent)
+                    )
+                }
+            }
+
+            // Song title + artist
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                androidx.compose.material3.Text(
+                    text = trackTitle.ifEmpty { "Not playing" },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1F2937),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
-            } else {
-                Image(
-                    painter = painterResource(R.drawable.ic_music_note),
-                    contentDescription = null,
-                    modifier = Modifier.size(40.dp),
-                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(CyanGlow)
+                androidx.compose.material3.Text(
+                    text = artistName.ifEmpty { "" },
+                    fontSize = 12.sp,
+                    color = PanelAccent.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // SongDetails: SongTitle (20sp Bold) + ArtistName (14sp)
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            androidx.compose.material3.Text(
-                text = trackTitle.ifEmpty { "Not playing" },
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.White,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            androidx.compose.material3.Text(
-                text = artistName.ifEmpty { "" },
-                fontSize = 14.sp,
-                color = CyanGlow.copy(alpha = 0.9f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-
-        // ProgressBar: thin LinearProgressIndicator (cyan)
-        LinearProgressIndicator(
-            progress = { progress },
+        // Bottom: Stop (red) | Previous | Play/Pause | Next
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(2.dp),
-            color = CyanGlow,
-            trackColor = CyanGlow.copy(alpha = 0.2f)
-        )
-
-        // BPMText: HUD bottom
-        androidx.compose.material3.Text(
-            text = currentBpm.toString(),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 32.sp,
-            color = strokeColor,
-            modifier = Modifier.padding(top = 4.dp)
-        )
+                .padding(horizontal = 8.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onStop) {
+                Icon(
+                    imageVector = Icons.Filled.Stop,
+                    contentDescription = "Stop",
+                    tint = StopRed,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            IconButton(onClick = onPrevious) {
+                Icon(
+                    imageVector = Icons.Filled.SkipPrevious,
+                    contentDescription = "Previous",
+                    tint = PanelAccent,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            IconButton(onClick = onPlayPause) {
+                Icon(
+                    imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    tint = PanelAccent,
+                    modifier = Modifier.size(40.dp)
+                )
+            }
+            IconButton(onClick = onNext) {
+                Icon(
+                    imageVector = Icons.Filled.SkipNext,
+                    contentDescription = "Next",
+                    tint = PanelAccent,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
     }
 }
 
