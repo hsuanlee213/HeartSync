@@ -230,7 +230,13 @@ fun GeometricHeartContent(
                         )
 
                         Image(
-                            painter = painterResource(R.drawable.login_logo_remove_background),
+                            painter = painterResource(
+                                when (mode) {
+                                    TerminalMode.ZEN -> R.drawable.login_logo_removed_background_green
+                                    TerminalMode.SYNC -> R.drawable.login_logo_remove_background
+                                    TerminalMode.OVERDRIVE -> R.drawable.login_logo_removed_background_gold
+                                }
+                            ),
                             contentDescription = null,
                             modifier = Modifier
                                 .fillMaxWidth(0.55f)
@@ -240,8 +246,7 @@ fun GeometricHeartContent(
                                     translationX = tremorX
                                     translationY = tremorY
                                 },
-                            contentScale = ContentScale.Fit,
-                            colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(accentColor)
+                            contentScale = ContentScale.Fit
                         )
 
                         SideVisualizer(
