@@ -1,20 +1,22 @@
 package com.heartbeatmusic.heartsync
 
-import androidx.lifecycle.ViewModel
+import android.app.Application
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.heartbeatmusic.PlayerHolder
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import androidx.media3.common.Player
 
 /**
  * HeartSync ViewModel.
- * Exposes heart rate as StateFlow for UI observation.
- * Uses MockHeartRateProvider with viewModelScope (no-arg constructor for ViewModelProvider).
+ * Exposes heart rate and playback state for UI observation.
  */
-class HeartSyncViewModel : ViewModel() {
+class HeartSyncViewModel(application: Application) : AndroidViewModel(application) {
 
     private val heartRateProvider = MockHeartRateProvider(viewModelScope, ActivityMode.CALM)
 
@@ -24,9 +26,33 @@ class HeartSyncViewModel : ViewModel() {
     private val _currentMode = MutableStateFlow(ActivityMode.CALM)
     val currentMode: StateFlow<ActivityMode> = _currentMode.asStateFlow()
 
+    private val _isMusicPlaying = MutableStateFlow(false)
+    val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
+
+    private val _currentTrackTitle = MutableStateFlow("")
+    val currentTrackTitle: StateFlow<String> = _currentTrackTitle.asStateFlow()
+
+    private val player = PlayerHolder.getInstance(application).getPlayer()
+
     init {
         collectHeartRate()
         startMonitoring()
+        observePlaybackState()
+    }
+
+    private fun observePlaybackState() {
+        player.addListener(object : Player.Listener {
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                _isMusicPlaying.value = isPlaying
+            }
+
+            override fun onMediaItemTransition(mediaItem: androidx.media3.common.MediaItem?, reason: Int) {
+                val title = mediaItem?.mediaMetadata?.title?.toString() ?: ""
+                _currentTrackTitle.value = title
+            }
+        })
+        _isMusicPlaying.value = player.isPlaying
+        _currentTrackTitle.value = player.currentMediaItem?.mediaMetadata?.title?.toString() ?: ""
     }
 
     private fun collectHeartRate() {
