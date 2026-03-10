@@ -6,13 +6,11 @@
     android:background="@color/deep_purple"
     tools:context=".terminal.TerminalFragment">
 
-    <!-- Placeholder container for heart animation (centered) -->
-    <FrameLayout
+    <!-- Geometric heart (Compose) -->
+    <androidx.compose.ui.platform.ComposeView
         android:id="@+id/heart_animation_container"
-        android:layout_width="200dp"
-        android:layout_height="200dp"
-        android:layout_gravity="center"
-        android:background="@android:color/transparent"
-        tools:ignore="UseCompoundDrawables" />
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_gravity="center" />
 
 </FrameLayout>
