@@ -105,6 +105,7 @@ fun GeometricHeartContent(
 ) {
     val currentBpm by viewModel.currentHeartRate.collectAsStateWithLifecycle()
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsStateWithLifecycle()
+    val isPanelExpanded by viewModel.isPanelExpanded.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.syncPlaybackState() }
     val currentTrackTitle by viewModel.currentTrackTitle.collectAsStateWithLifecycle()
     val currentTrackArtist by viewModel.currentTrackArtist.collectAsStateWithLifecycle()
@@ -114,20 +115,18 @@ fun GeometricHeartContent(
     val strokeColor = mode.strokeColor()
     val breathMult = mode.breathMultiplier()
 
-    val panelExpanded = isMusicPlaying
-
     val heartOffsetY by animateDpAsState(
-        targetValue = if (panelExpanded) (-48).dp else 0.dp,
+        targetValue = if (isPanelExpanded) (-48).dp else 0.dp,
         animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
         label = "heartOffset"
     )
     val heartBaseScale by animateFloatAsState(
-        targetValue = if (panelExpanded) 0.9f else 1f,
+        targetValue = if (isPanelExpanded) 0.9f else 1f,
         animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
         label = "heartScale"
     )
     val visualizerAlpha by animateFloatAsState(
-        targetValue = if (panelExpanded) 1f else 0f,
+        targetValue = if (isMusicPlaying) 1f else 0f,
         animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
         label = "visualizerAlpha"
     )
@@ -184,7 +183,7 @@ fun GeometricHeartContent(
         val expandedHeightDp: Dp = maxHeight * 0.4f
 
         val panelHeight by animateDpAsState(
-            targetValue = if (panelExpanded) expandedHeightDp else COLLAPSED_PANEL_HEIGHT,
+            targetValue = if (isPanelExpanded) expandedHeightDp else COLLAPSED_PANEL_HEIGHT,
             animationSpec = tween(TRANSITION_MS, easing = FastOutSlowInEasing),
             label = "panelHeight"
         )
@@ -217,7 +216,7 @@ fun GeometricHeartContent(
                                 .align(Alignment.CenterStart)
                                 .padding(start = 8.dp)
                                 .graphicsLayer { alpha = visualizerAlpha },
-                            isActive = panelExpanded
+                            isActive = isMusicPlaying
                         )
 
                         Image(
@@ -239,7 +238,7 @@ fun GeometricHeartContent(
                                 .align(Alignment.CenterEnd)
                                 .padding(end = 8.dp)
                                 .graphicsLayer { alpha = visualizerAlpha },
-                            isActive = panelExpanded
+                            isActive = isMusicPlaying
                         )
                     }
 
@@ -282,7 +281,7 @@ fun GeometricHeartContent(
                     )
             ) {
                 AnimatedContent(
-                    targetState = panelExpanded,
+                    targetState = isPanelExpanded,
                     transitionSpec = {
                         (fadeIn(tween(TRANSITION_MS)) + slideInVertically(
                             animationSpec = tween(TRANSITION_MS),

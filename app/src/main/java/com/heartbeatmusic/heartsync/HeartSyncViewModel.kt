@@ -38,6 +38,10 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isMusicPlaying = MutableStateFlow(false)
     val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
 
+    /** True when we have an active track (panel expanded). Stays true during seek/pause. */
+    private val _isPanelExpanded = MutableStateFlow(false)
+    val isPanelExpanded: StateFlow<Boolean> = _isPanelExpanded.asStateFlow()
+
     private val _currentTrackTitle = MutableStateFlow("")
     val currentTrackTitle: StateFlow<String> = _currentTrackTitle.asStateFlow()
 
@@ -75,15 +79,18 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     _currentTrackTitle.value = md?.title?.toString() ?: ""
                     _currentTrackArtist.value = md?.artist?.toString() ?: ""
                     _currentCoverUrl.value = md?.artworkUri?.toString()
+                    _isPanelExpanded.value = mediaItem != null
                 }
             }
         })
         viewModelScope.launch(Dispatchers.Main.immediate) {
             _isMusicPlaying.value = player.isPlaying
-            val md = player.currentMediaItem?.mediaMetadata
+            val mediaItem = player.currentMediaItem
+            val md = mediaItem?.mediaMetadata
             _currentTrackTitle.value = md?.title?.toString() ?: ""
             _currentTrackArtist.value = md?.artist?.toString() ?: ""
             _currentCoverUrl.value = md?.artworkUri?.toString()
+            _isPanelExpanded.value = mediaItem != null
             if (player.isPlaying) startProgressUpdates()
         }
     }
@@ -109,10 +116,12 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     fun syncPlaybackState() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
             _isMusicPlaying.value = player.isPlaying
-            val md = player.currentMediaItem?.mediaMetadata
+            val mediaItem = player.currentMediaItem
+            val md = mediaItem?.mediaMetadata
             _currentTrackTitle.value = md?.title?.toString() ?: ""
             _currentTrackArtist.value = md?.artist?.toString() ?: ""
             _currentCoverUrl.value = md?.artworkUri?.toString()
+            _isPanelExpanded.value = mediaItem != null
             if (player.isPlaying) startProgressUpdates()
         }
     }
@@ -183,6 +192,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                             player.setMediaItem(mediaItem)
                             player.prepare()
                             player.play()
+                            _isPanelExpanded.value = true
                         }
                     }
                     override fun onError(e: Exception?) {}
@@ -197,6 +207,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             player.stop()
             player.clearMediaItems()
             _isMusicPlaying.value = false
+            _isPanelExpanded.value = false
             _currentTrackTitle.value = ""
             _currentTrackArtist.value = ""
             _currentCoverUrl.value = null
