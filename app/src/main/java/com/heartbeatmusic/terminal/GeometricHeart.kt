@@ -17,6 +17,8 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -52,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
@@ -71,8 +74,10 @@ import kotlin.math.sin
 private val CyanGlow = Color(0xFF00FFFF)
 private val ZenPurple = Color(0xFFE0B0FF)
 private val OverdriveCyan = Color(0xFF40FFFF)
-private val PanelAccent = Color(0xFF6366F1) // Indigo for white panel contrast
+private val PanelAccent = Color(0xFF6366F1)
 private val StopRed = Color(0xFFEF4444)
+private val PanelBg = Color(0xFF1A1A2E)
+private val SliderInactive = Color(0xFF333333)
 private const val TRANSITION_MS = 500
 private val COLLAPSED_PANEL_HEIGHT = 72.dp
 
@@ -251,14 +256,30 @@ fun GeometricHeartContent(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // MusicPlayerPanel: unified panel (collapsed = Play only, expanded = full controls)
-            Surface(
+            // MusicPlayerPanel: frosted glass style, 28dp top corners, cyan gradient border
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(panelHeight),
-                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-                color = Color.White,
-                tonalElevation = 4.dp
+                    .height(panelHeight)
+                    .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                    .background(PanelBg.copy(alpha = 0.85f))
+                    .then(
+                        Modifier.drawWithContent {
+                            drawContent()
+                            // Top edge gradient: transparent -> cyan -> transparent
+                            drawRect(
+                                brush = Brush.horizontalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        CyanGlow,
+                                        Color.Transparent
+                                    )
+                                ),
+                                topLeft = Offset.Zero,
+                                size = androidx.compose.ui.geometry.Size(size.width, 1.dp.toPx())
+                            )
+                        }
+                    )
             ) {
                 AnimatedContent(
                     targetState = panelExpanded,
@@ -302,7 +323,7 @@ private fun CollapsedPanel(onPlayClick: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .padding(16.dp),
+            .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         IconButton(
@@ -312,7 +333,7 @@ private fun CollapsedPanel(onPlayClick: () -> Unit) {
             Icon(
                 imageVector = Icons.Filled.PlayArrow,
                 contentDescription = "Play",
-                tint = PanelAccent,
+                tint = CyanGlow,
                 modifier = Modifier.size(40.dp)
             )
         }
@@ -333,37 +354,36 @@ private fun ExpandedPanel(
     isPlaying: Boolean
 ) {
     Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // Progress Slider at top, full width, no padding (edge-to-edge)
+        // Progress Slider at top: cyan active, dark gray inactive, smaller thumb
         Slider(
             value = progress,
             onValueChange = onProgressChange,
             modifier = Modifier.fillMaxWidth(),
             colors = SliderDefaults.colors(
-                thumbColor = PanelAccent,
-                activeTrackColor = PanelAccent,
-                inactiveTrackColor = PanelAccent.copy(alpha = 0.2f)
+                thumbColor = CyanGlow,
+                activeTrackColor = CyanGlow,
+                inactiveTrackColor = SliderInactive
             )
         )
 
-        // Middle: Row with album art, song name (Bold), artist
-
+        // Middle: Row with album art (cyan border), song name (Bold), artist
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // AlbumArt (small circular)
+            // AlbumArt: circular with 1.dp cyan border
             Box(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
+                    .border(1.dp, CyanGlow, CircleShape)
                     .drawWithContent {
-                        drawCircle(color = PanelAccent.copy(alpha = 0.3f), radius = size.minDimension / 2 + 4)
                         drawContent()
                     },
                 contentAlignment = Alignment.Center
@@ -380,12 +400,12 @@ private fun ExpandedPanel(
                         painter = painterResource(R.drawable.ic_music_note),
                         contentDescription = null,
                         modifier = Modifier.size(24.dp),
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(PanelAccent)
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(CyanGlow)
                     )
                 }
             }
 
-            // Song title + artist
+            // Song title (White) + artist (LightGray)
             Column(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
@@ -394,41 +414,49 @@ private fun ExpandedPanel(
                     text = trackTitle.ifEmpty { "Not playing" },
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1F2937),
+                    color = Color.White,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 androidx.compose.material3.Text(
                     text = artistName.ifEmpty { "" },
                     fontSize = 12.sp,
-                    color = PanelAccent.copy(alpha = 0.9f),
+                    color = Color.LightGray.copy(alpha = 0.7f),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
         }
 
-        // Bottom: Stop (red) | Previous | Play/Pause | Next
+        // Bottom: Stop (red glow border) | Previous | Play/Pause | Next (all cyan)
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onStop) {
-                Icon(
-                    imageVector = Icons.Filled.Stop,
-                    contentDescription = "Stop",
-                    tint = StopRed,
-                    modifier = Modifier.size(32.dp)
-                )
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .border(1.dp, StopRed.copy(alpha = 0.6f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                IconButton(
+                    onClick = onStop,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Stop,
+                        contentDescription = "Stop",
+                        tint = CyanGlow,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
             }
             IconButton(onClick = onPrevious) {
                 Icon(
                     imageVector = Icons.Filled.SkipPrevious,
                     contentDescription = "Previous",
-                    tint = PanelAccent,
+                    tint = CyanGlow,
                     modifier = Modifier.size(32.dp)
                 )
             }
@@ -436,7 +464,7 @@ private fun ExpandedPanel(
                 Icon(
                     imageVector = if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                     contentDescription = if (isPlaying) "Pause" else "Play",
-                    tint = PanelAccent,
+                    tint = CyanGlow,
                     modifier = Modifier.size(40.dp)
                 )
             }
@@ -444,7 +472,7 @@ private fun ExpandedPanel(
                 Icon(
                     imageVector = Icons.Filled.SkipNext,
                     contentDescription = "Next",
-                    tint = PanelAccent,
+                    tint = CyanGlow,
                     modifier = Modifier.size(32.dp)
                 )
             }
