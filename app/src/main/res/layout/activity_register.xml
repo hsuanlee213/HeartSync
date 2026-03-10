@@ -40,7 +40,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Join us to start your fitness journey"
+            android:text="Sync your pulse. Unlock the rhythm within."
             android:textSize="14sp"
             android:textColor="@color/white"
             android:alpha="0.8"
@@ -65,6 +65,7 @@
                     android:layout_height="wrap_content"
                     android:hint="User Email"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    android:layout_marginTop="4dp"
                     android:layout_marginBottom="12dp">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -81,6 +82,7 @@
                     android:hint="Password"
                     style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
                     app:passwordToggleEnabled="true"
+                    android:layout_marginTop="8dp"
                     android:layout_marginBottom="12dp">
 
                     <com.google.android.material.textfield.TextInputEditText
@@ -97,14 +99,15 @@
                     android:text="Personal Information (Optional)"
                     android:textSize="14sp"
                     android:textStyle="bold"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="16dp"
                     android:layout_marginBottom="12dp"/>
 
-                <!-- Age, Resting BPM, Energy Level in a row (all optional) -->
+                <!-- Age, RHR, Energy Level in a row (all optional) -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
+                    android:layout_marginTop="4dp"
                     android:layout_marginBottom="12dp">
 
                     <!-- Age Field (optional, default 25) -->
@@ -116,6 +119,7 @@
                         android:hint="Age"
                         app:placeholderText="25"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_marginTop="8dp"
                         android:layout_marginEnd="8dp">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -125,18 +129,18 @@
                             android:inputType="number"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Resting BPM (optional, default 70) -->
+                    <!-- RHR (Resting BPM) - optional, default 70 -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_weight"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:minHeight="72dp"
-                        android:hint="Resting BPM"
+                        android:hint="RHR (Resting BPM)"
                         app:placeholderText="70"
-                        app:helperText="Resting heart rate, typically around 70 for most people"
+                        app:helperText="Range: 40 - 100 BPM"
                         app:helperTextEnabled="true"
                         style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_marginTop="8dp"
                         android:layout_marginEnd="8dp">
 
                         <com.google.android.material.textfield.TextInputEditText
@@ -146,14 +150,14 @@
                             android:inputType="number"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
-                    <!-- Energy Level (optional, dropdown, default 3 - Balanced) -->
+                    <!-- Energy Level (optional, narrow width, shows number only when collapsed) -->
                     <com.google.android.material.textfield.TextInputLayout
                         android:id="@+id/til_energy_level"
-                        android:layout_width="0dp"
+                        android:layout_width="80dp"
                         android:layout_height="wrap_content"
-                        android:layout_weight="1"
                         android:hint="Energy Level"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        android:layout_marginTop="8dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
                             android:id="@+id/dropdown_energy_level"
@@ -167,29 +171,14 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Fitness Level (optional) -->
-                <com.google.android.material.textfield.TextInputLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Fitness Level"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
-                    android:layout_marginBottom="24dp">
-
-                    <!-- The Spinner is kept inside the TextInputLayout for the boxed visual style -->
-                    <Spinner
-                        android:id="@+id/spinner_fitness_level"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:minHeight="48dp"/>
-                </com.google.android.material.textfield.TextInputLayout>
-
                 <!-- Register Button -->
                 <Button
                     android:id="@+id/btn_create_account"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:text="Create Account"
-                    style="@style/Widget.Material3.Button"/>
+                    style="@style/Widget.Material3.Button"
+                    android:layout_marginTop="28dp"/>
 
             </LinearLayout>
         </androidx.cardview.widget.CardView>

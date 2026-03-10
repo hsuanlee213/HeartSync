@@ -9,7 +9,6 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.Spinner;
 import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -29,7 +28,6 @@ public class RegisterActivity extends AppCompatActivity {
     private static final String TAG = "RegisterActivity";
     private EditText etEmail, etPassword, etAge, etWeight;
     private AutoCompleteTextView dropdownEnergyLevel;
-    private Spinner spinnerFitnessLevel;
     private Button btnCreateAccount;
     private ImageButton btnBack;
 
@@ -56,19 +54,18 @@ public class RegisterActivity extends AppCompatActivity {
         etAge = findViewById(R.id.et_age);
         etWeight = findViewById(R.id.et_weight);
         dropdownEnergyLevel = findViewById(R.id.dropdown_energy_level);
-        spinnerFitnessLevel = findViewById(R.id.spinner_fitness_level);
         btnCreateAccount = findViewById(R.id.btn_create_account);
         btnBack = findViewById(R.id.btn_back_register);
-
-        ArrayAdapter<CharSequence> fitnessAdapter = ArrayAdapter.createFromResource(this,
-                R.array.fitness_levels, android.R.layout.simple_spinner_item);
-        fitnessAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinnerFitnessLevel.setAdapter(fitnessAdapter);
 
         ArrayAdapter<CharSequence> energyAdapter = ArrayAdapter.createFromResource(this,
                 R.array.energy_levels, android.R.layout.simple_dropdown_item_1line);
         dropdownEnergyLevel.setAdapter(energyAdapter);
-        dropdownEnergyLevel.setText("3 - Balanced", false);
+        dropdownEnergyLevel.setText("3", false);  // Collapsed: show number only
+        dropdownEnergyLevel.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = (String) parent.getItemAtPosition(position);
+            String numOnly = selected.substring(0, 1);  // "1", "2", "3", "4", or "5"
+            dropdownEnergyLevel.setText(numOnly, false);
+        });
 
         btnBack.setOnClickListener(v -> finish());
 
@@ -116,9 +113,8 @@ public class RegisterActivity extends AppCompatActivity {
         String ageStr = etAge.getText().toString().trim();
         String weightStr = etWeight.getText().toString().trim();
         String energyLevelStr = dropdownEnergyLevel.getText().toString().trim();
-        String fitnessLevel = spinnerFitnessLevel.getSelectedItem().toString();
 
-        // Build Bio-Profile with defaults for empty fields (age=25, restingBPM=70, energyLevel=3)
+        // Build Bio-Profile with defaults (age=25, RHR=70, energyLevel=3)
         BioProfile bioProfile = RegistrationMapper.INSTANCE.buildBioProfile(
                 ageStr.isEmpty() ? null : ageStr,
                 weightStr.isEmpty() ? null : weightStr,
@@ -129,7 +125,6 @@ public class RegisterActivity extends AppCompatActivity {
         profileData.put("age", ageStr);
         profileData.put("weight", weightStr);
         profileData.put("energy_level", energyLevelStr);
-        profileData.put("fitness_level", fitnessLevel);
         profileData.put("bio_max_heart_rate", bioProfile.getMaxHeartRate());
         profileData.put("bio_resting_bpm", bioProfile.getRestingBPM());
         profileData.put("bio_energy_level", bioProfile.getEnergyLevel());

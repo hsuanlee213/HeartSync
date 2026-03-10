@@ -15,11 +15,11 @@ object RegistrationMapper {
     }
 
     /**
-     * Weight -> restingBPM. Default 70 if empty.
+     * Weight -> restingBPM. Default 70 if empty. Range: 40-100 BPM.
      */
     fun weightToRestingBPM(weightStr: String?): Int {
         val value = weightStr?.toIntOrNull() ?: BioProfile.DEFAULT_RESTING_BPM
-        return value.coerceIn(40, 120)
+        return value.coerceIn(40, 100)
     }
 
     /**
