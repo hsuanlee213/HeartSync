@@ -144,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
                     String url = song.getAudioUrl();
                     String title = song.getTitle();
                     String artist = song.getArtist();
+                    String coverUrl = song.getCoverUrl();
                     if (url == null || url.isEmpty()) {
                         Toast.makeText(MainActivity.this,
                                 R.string.no_songs_available,
@@ -152,13 +153,15 @@ public class MainActivity extends AppCompatActivity {
                     }
                     String displayTitle = (title != null && !title.isEmpty()) ? title : "Unknown";
                     String displayArtist = (artist != null && !artist.isEmpty()) ? artist : "Unknown";
+                    MediaMetadata.Builder metaBuilder = new MediaMetadata.Builder()
+                            .setTitle(displayTitle)
+                            .setArtist(displayArtist);
+                    if (coverUrl != null && !coverUrl.isEmpty()) {
+                        metaBuilder.setArtworkUri(Uri.parse(coverUrl));
+                    }
                     MediaItem mediaItem = new MediaItem.Builder()
                             .setUri(Uri.parse(url))
-                            .setMediaMetadata(
-                                    new MediaMetadata.Builder()
-                                            .setTitle(displayTitle)
-                                            .setArtist(displayArtist)
-                                            .build())
+                            .setMediaMetadata(metaBuilder.build())
                             .build();
                     player.setMediaItem(mediaItem);
                     player.prepare();

@@ -96,13 +96,17 @@ public class MusicLibraryActivity extends AppCompatActivity {
 
         adapter = new TrackAdapter(this, trackList, track -> {
             if (player != null && track != null) {
+                String artist = track.getArtist();
+                String coverUrl = track.getCoverUrl();
+                MediaMetadata.Builder metaBuilder = new MediaMetadata.Builder()
+                        .setTitle(track.getTitle())
+                        .setArtist(artist != null ? artist : "");
+                if (coverUrl != null && !coverUrl.isEmpty()) {
+                    metaBuilder.setArtworkUri(Uri.parse(coverUrl));
+                }
                 MediaItem mi = new MediaItem.Builder()
                         .setUri(Uri.parse(track.getUrl()))
-                        .setMediaMetadata(
-                                new MediaMetadata.Builder()
-                                        .setTitle(track.getTitle())
-                                        .build()
-                        )
+                        .setMediaMetadata(metaBuilder.build())
                         .build();
                 player.setMediaItem(mi);
                 player.prepare();
@@ -195,11 +199,13 @@ public class MusicLibraryActivity extends AppCompatActivity {
                 for (Song s : songs) {
                     String docId = s.getId();
                     String title = s.getTitle();
+                    String artist = s.getArtist();
+                    String coverUrl = s.getCoverUrl();
                     String url = s.getAudioUrl();
                     Integer bpm = s.getBpm() != null ? s.getBpm().intValue() : 0;
 
                     if (docId != null && title != null && url != null && !url.isEmpty()) {
-                        trackList.add(new Track(docId, title, url, bpm));
+                        trackList.add(new Track(docId, title, artist, coverUrl, url, bpm));
                         songIdToBpmMap.put(docId, bpm);
                     }
                 }

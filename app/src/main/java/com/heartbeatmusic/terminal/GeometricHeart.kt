@@ -10,12 +10,10 @@ import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.basicMarquee
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -24,7 +22,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Card
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -40,10 +38,12 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import coil.compose.AsyncImage
 import com.heartbeatmusic.R
 import com.heartbeatmusic.heartsync.HeartSyncViewModel
 import kotlin.math.sin
@@ -70,7 +70,6 @@ private fun TerminalMode.breathMultiplier(): Float = when (this) {
     TerminalMode.OVERDRIVE -> 0.6f
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun GeometricHeartContent(
     modifier: Modifier = Modifier,
@@ -80,6 +79,9 @@ fun GeometricHeartContent(
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.syncPlaybackState() }
     val currentTrackTitle by viewModel.currentTrackTitle.collectAsStateWithLifecycle()
+    val currentTrackArtist by viewModel.currentTrackArtist.collectAsStateWithLifecycle()
+    val currentCoverUrl by viewModel.currentCoverUrl.collectAsStateWithLifecycle()
+    val playbackProgress by viewModel.playbackProgress.collectAsStateWithLifecycle()
     val mode by TerminalModeHolder.selectedMode.collectAsStateWithLifecycle()
     val strokeColor = mode.strokeColor()
     val breathMult = mode.breathMultiplier()
@@ -200,88 +202,102 @@ fun GeometricHeartContent(
             )
         }
 
-        // MusicInfoContainer: album art + marquee (between heart and BPM)
-        MusicInfoContainer(
+        // Central info: AlbumArt, SongDetails, ProgressBar, BPM (alpha tied to isMusicPlaying)
+        CentralInfoColumn(
             trackTitle = currentTrackTitle,
-            isMusicPlaying = isMusicPlaying,
+            artistName = currentTrackArtist,
+            coverUrl = currentCoverUrl,
+            progress = playbackProgress,
+            currentBpm = currentBpm,
+            strokeColor = strokeColor,
             modifier = Modifier
-                .padding(top = 12.dp)
+                .padding(top = 16.dp)
                 .graphicsLayer { alpha = musicInfoAlpha }
-        )
-
-        // BPM
-        androidx.compose.material3.Text(
-            text = currentBpm.toString(),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 32.sp,
-            color = strokeColor,
-            modifier = Modifier.padding(top = 24.dp)
         )
 
         Spacer(modifier = Modifier.height(8.dp))
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MusicInfoContainer(
+private fun CentralInfoColumn(
     trackTitle: String,
-    isMusicPlaying: Boolean,
+    artistName: String,
+    coverUrl: String?,
+    progress: Float,
+    currentBpm: Int,
+    strokeColor: Color,
     modifier: Modifier = Modifier
 ) {
-    val infiniteTransition = rememberInfiniteTransition(label = "album")
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3000),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Restart
-        ),
-        label = "albumRotate"
-    )
-
-    Row(
+    Column(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Rotating album cover: Card + CircleShape, rotates only when playing
-        Card(
-            shape = CircleShape,
-            colors = androidx.compose.material3.CardDefaults.cardColors(
-                containerColor = Color(0xFF2A2A2A)
-            ),
+        // AlbumArt: 80dp circular Image
+        Box(
             modifier = Modifier
-                .size(48.dp)
-                .graphicsLayer { rotationZ = if (isMusicPlaying) rotation else 0f }
+                .size(80.dp)
+                .clip(CircleShape)
                 .drawWithContent {
-                    drawCircle(color = CyanGlow.copy(alpha = 0.25f), radius = size.minDimension / 2 + 4)
+                    drawCircle(color = CyanGlow.copy(alpha = 0.2f), radius = size.minDimension / 2 + 6)
                     drawContent()
-                }
+                },
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = Alignment.Center
-            ) {
+            if (coverUrl != null && coverUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
                 Image(
                     painter = painterResource(R.drawable.ic_music_note),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(40.dp),
                     colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(CyanGlow)
                 )
             }
         }
-        Spacer(modifier = Modifier.padding(horizontal = 12.dp))
-        androidx.compose.material3.Text(
-            text = trackTitle.ifEmpty { "Not playing" },
-            fontFamily = FontFamily.Monospace,
-            fontSize = 14.sp,
-            color = CyanGlow,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
+
+        // SongDetails: SongTitle (20sp Bold) + ArtistName (14sp)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            androidx.compose.material3.Text(
+                text = trackTitle.ifEmpty { "Not playing" },
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            androidx.compose.material3.Text(
+                text = artistName.ifEmpty { "" },
+                fontSize = 14.sp,
+                color = CyanGlow.copy(alpha = 0.9f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // ProgressBar: thin LinearProgressIndicator (cyan)
+        LinearProgressIndicator(
+            progress = { progress },
             modifier = Modifier
-                .weight(1f)
-                .basicMarquee()
+                .fillMaxWidth()
+                .height(2.dp),
+            color = CyanGlow,
+            trackColor = CyanGlow.copy(alpha = 0.2f)
+        )
+
+        // BPMText: HUD bottom
+        androidx.compose.material3.Text(
+            text = currentBpm.toString(),
+            fontFamily = FontFamily.Monospace,
+            fontSize = 32.sp,
+            color = strokeColor,
+            modifier = Modifier.padding(top = 4.dp)
         )
     }
 }
