@@ -184,7 +184,11 @@ fun GeometricHeartContent(
     val scaleWithJitter = heartScale.value + (if (mode == TerminalMode.OVERDRIVE) (jitterX - 0.5f) * 0.015f else 0f)
     val tremorX = if (mode == TerminalMode.OVERDRIVE) sin(jitterX * 6.28f) * 2f else 0f
     val tremorY = if (mode == TerminalMode.OVERDRIVE) sin(jitterY * 6.28f + 1.5f) * 2f else 0f
-    val effectiveScale = heartBaseScale * scaleWithJitter
+    val modeSizeScale = when (mode) {
+        TerminalMode.SYNC -> 1f
+        TerminalMode.ZEN, TerminalMode.OVERDRIVE -> 0.92f
+    }
+    val effectiveScale = heartBaseScale * scaleWithJitter * modeSizeScale
 
     BoxWithConstraints(
         modifier = modifier.fillMaxSize()

@@ -17,7 +17,7 @@ enum class TerminalMode(
 ) {
     ZEN(
         musicTags = "ambient, meditation, piano, soft, peaceful",
-        accentColor = Color(0xFFE0B0FF), // Lavender purple
+        accentColor = Color(0xFF39FF14), // Fluorescent green (matches heart)
         mockTitle = "Eternal Peace",
         mockArtist = "Calm Master"
     ),
@@ -29,7 +29,7 @@ enum class TerminalMode(
     ),
     OVERDRIVE(
         musicTags = "techno, rock, aggressive, powerful, high-tempo",
-        accentColor = Color(0xFFFF4500), // Orange red
+        accentColor = Color(0xFFFFD700), // Gold (matches heart)
         mockTitle = "System Overload",
         mockArtist = "Kinetic Power"
     )

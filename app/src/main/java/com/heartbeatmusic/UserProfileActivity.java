@@ -5,22 +5,18 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
-import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.content.ContextCompat; // <-- NEW IMPORT
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
-import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.firebase.auth.AuthCredential;
 import com.google.firebase.auth.EmailAuthProvider;
@@ -44,25 +40,8 @@ public class UserProfileActivity extends AppCompatActivity {
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_user_profile);
 
-        // --- Ensure back button is visible START ---
-        MaterialToolbar toolbar = findViewById(R.id.toolbar_profile);
-        if (toolbar != null) {
-            setSupportActionBar(toolbar);
-            if (getSupportActionBar() != null) {
-                // Enable up navigation button (back arrow)
-                getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-                // Set title (redundant with XML but ensures visibility)
-                getSupportActionBar().setTitle("Edit Profile");
-
-                // Ensure back arrow (nav icon) is white to match title color
-                try {
-                    toolbar.setNavigationIconTint(ContextCompat.getColor(this, android.R.color.white));
-                } catch (Exception e) {
-                    Log.e(TAG, "Failed to set navigation icon tint.", e);
-                }
-            }
-        }
-        // --- Ensure back button is visible END ---
+        // Back button
+        findViewById(R.id.btn_back).setOnClickListener(v -> finish());
 
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.user_profile), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -91,15 +70,6 @@ public class UserProfileActivity extends AppCompatActivity {
             startActivity(historyIntent);
         });
         btnLogout.setOnClickListener(v -> performLogout());
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == android.R.id.home) {
-            finish();
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
     }
 
     private void loadUserProfileData() {

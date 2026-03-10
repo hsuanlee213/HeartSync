@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- HUD-style TextInputLayout for Edit Profile -->
+    <style name="TechTextInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/tech_input_bg</item>
+        <item name="boxStrokeColor">@color/tech_stroke_color</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextColor">@color/tech_label_gray</item>
+        <item name="android:textColorHint">@color/tech_label_gray</item>
+        <item name="cursorColor">@color/tech_cyan</item>
+        <item name="startIconTint">@color/tech_cyan</item>
+    </style>
+</resources>

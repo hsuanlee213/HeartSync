@@ -3,4 +3,11 @@
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
     <color name="deep_purple">#2A004D</color>
+    <!-- HeartSync tech style -->
+    <color name="tech_bg_dark">#1A1A2E</color>
+    <color name="tech_cyan">#00FFFF</color>
+    <color name="tech_cyan_dark">#008B8B</color>
+    <color name="tech_label_gray">#B3B3B3B3</color>
+    <color name="tech_input_bg">#0DFFFFFF</color>
+    <color name="tech_stroke_default">#4D4D4D</color>
 </resources>
