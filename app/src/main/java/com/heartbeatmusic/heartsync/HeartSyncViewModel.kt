@@ -1,9 +1,11 @@
 package com.heartbeatmusic.heartsync
 
+import android.content.Context
+import android.net.ConnectivityManager
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.app.Application
 import android.util.Log
-import android.widget.Toast
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -31,10 +33,12 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 
 private const val TAG = "HeartSync"
 
@@ -84,6 +88,14 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val _isMusicPlaying = MutableStateFlow(false)
     val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
+
+    /** "API" | "Local" | "Idle" - for debug UI when BuildConfig.DEBUG */
+    private val _playbackSource = MutableStateFlow("Idle")
+    val playbackSource: StateFlow<String> = _playbackSource.asStateFlow()
+
+    private var suppressIsPlayingFalseForNetworkFallback = false
+    /** When true, allow onIsPlayingChanged to set _isMusicPlaying=false (user pressed Pause). */
+    private var userRequestedPause = false
 
     /** Mode that owns the current playback. Null when nothing playing. */
     private val _playingMode = MutableStateFlow<TerminalMode?>(null)
@@ -170,9 +182,18 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun observePlaybackState() {
+        val vm = this
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 viewModelScope.launch(Dispatchers.Main.immediate) {
+                    if (!isPlaying) {
+                        if (suppressIsPlayingFalseForNetworkFallback) return@launch
+                        if (_playbackSource.value == "Local" && !userRequestedPause) {
+                            Log.d(TAG, "HeartSync_Debug: Ignoring isPlaying=false (Local source, not user pause)")
+                            return@launch
+                        }
+                    }
+                    userRequestedPause = false
                     _isMusicPlaying.value = isPlaying
                     if (isPlaying) {
                         if (sessionStartTime == null) {
@@ -188,6 +209,23 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                         startProgressUpdates()
                     } else {
                         stopProgressUpdates()
+                    }
+                }
+            }
+
+            override fun onPlayerError(error: PlaybackException) {
+                viewModelScope.launch(Dispatchers.Main.immediate) {
+                    val cause = error.cause
+                    if (isNetworkRelatedError(cause)) {
+                        Log.d(TAG, "HeartSync_Debug: Network down, switching to Assets path.")
+                        suppressIsPlayingFalseForNetworkFallback = true
+                        vm.fallbackToEssentialsOnNetworkError()
+                    } else {
+                        Log.e(TAG, "HeartSync_Debug: ERROR: Asset filename mismatch or missing.", error)
+                        if (_playbackSource.value == "Local") {
+                            suppressIsPlayingFalseForNetworkFallback = true
+                            vm.fallbackToResRaw()
+                        }
                     }
                 }
             }
@@ -219,6 +257,86 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         })
     }
 
+    private fun isNetworkRelatedError(throwable: Throwable?): Boolean {
+        var t = throwable
+        while (t != null) {
+            if (t is UnknownHostException || t is SocketTimeoutException ||
+                t is java.net.ConnectException) {
+                return true
+            }
+            t = t.cause
+        }
+        return false
+    }
+
+    /** Called from Player.Listener when network fails. */
+    internal fun fallbackToEssentialsOnNetworkError() {
+        player.stop()
+        player.clearMediaItems()
+        stopProgressUpdates()
+        doPlayEssentials(useResRaw = false)
+    }
+
+    /** Called from Player.Listener when asset load fails. Uses res/raw fallback. */
+    internal fun fallbackToResRaw() {
+        doPlayEssentials(useResRaw = true)
+    }
+
+    private fun doPlayEssentials(useResRaw: Boolean) {
+        val mode = TerminalModeHolder.getCurrentMode()
+        _playingMode.value = mode
+        _isPanelExpanded.value = true
+        _playbackSource.value = "Local"
+        val pkg = getApplication<android.app.Application>().packageName
+        val (uri, title, artist) = when (mode) {
+            TerminalMode.ZEN -> Triple(
+                if (useResRaw) Uri.parse("android.resource://$pkg/${R.raw.essential_zen}")
+                else Uri.parse("file:///android_asset/essentials/zen.mp3"),
+                "Eternal Peace (Offline)", "Calm Master"
+            )
+            TerminalMode.SYNC -> Triple(
+                if (useResRaw) Uri.parse("android.resource://$pkg/${R.raw.essential_sync}")
+                else Uri.parse("file:///android_asset/essentials/sync.mp3"),
+                "Digital Pulse (Offline)", "Sync Theory"
+            )
+            TerminalMode.OVERDRIVE -> Triple(
+                if (useResRaw) Uri.parse("android.resource://$pkg/${R.raw.essential_overdrive}")
+                else Uri.parse("file:///android_asset/essentials/overdrive.mp3"),
+                "System Overload (Offline)", "Kinetic Power"
+            )
+        }
+        Log.d(TAG, "HeartSync_Debug: ExoPlayer loading: $uri")
+        val songId = "essential_${mode.name}"
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(songId)
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .build()
+            )
+            .build()
+        player.setMediaItem(mediaItem)
+        player.prepare()
+        player.play()
+        _currentSongId.value = songId
+        _displayTitle.value = title
+        _displayArtist.value = artist
+        _displayFirstTag.value = ""
+        _displayCoverColor.value = null
+        _isMusicPlaying.value = true
+        suppressIsPlayingFalseForNetworkFallback = false
+    }
+
+    private fun isNetworkAvailable(): Boolean {
+        val cm = getApplication<android.app.Application>().getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+            ?: return false
+        val network = cm.activeNetwork ?: return false
+        val caps = cm.getNetworkCapabilities(network) ?: return false
+        return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+    }
+
     private fun inferPlayingModeFromMediaId(mediaId: String?) {
         if (mediaId?.startsWith("essential_") == true) {
             val modeName = mediaId.removePrefix("essential_")
@@ -242,7 +360,12 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentCoverUrl.value = md?.artworkUri?.toString()
             _isPanelExpanded.value = mediaItem != null
             _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
-            if (mediaItem != null) inferPlayingModeFromMediaId(mediaItem.mediaId)
+            if (mediaItem != null) {
+                inferPlayingModeFromMediaId(mediaItem.mediaId)
+                _playbackSource.value = if (mediaItem.mediaId?.startsWith("essential_") == true) "Local" else "API"
+            } else {
+                _playbackSource.value = "Idle"
+            }
             if (player.isPlaying) startProgressUpdates()
         }
     }
@@ -277,12 +400,14 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
             if (mediaItem != null) {
                 inferPlayingModeFromMediaId(mediaItem.mediaId)
+                _playbackSource.value = if (mediaItem.mediaId?.startsWith("essential_") == true) "Local" else "API"
                 _displayTitle.value = md?.title?.toString() ?: ""
                 _displayArtist.value = md?.artist?.toString() ?: ""
                 _displayFirstTag.value = ""
                 _displayCoverColor.value = null
             } else {
                 _playingMode.value = null
+                _playbackSource.value = "Idle"
             }
             if (player.isPlaying) startProgressUpdates()
         }
@@ -321,6 +446,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
             if (isThisModePlaying) {
                 Log.d(TAG, "HeartSync_Audio: Pausing mode=$currentMode")
+                userRequestedPause = true
                 player.pause()
             } else {
                 if (player.currentMediaItem == null) {
@@ -343,6 +469,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun loadAndPlayFirstSong() {
+        val vm = this
         viewModelScope.launch(Dispatchers.Main.immediate) {
             val mode = TerminalModeHolder.getCurrentMode()
             Log.d(TAG, "HeartSync_Audio: Playing: $mode, stopping previous tracks...")
@@ -350,37 +477,77 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             player.clearMediaItems()
             stopProgressUpdates()
 
-            setTerminalMode(mode)
+            val activityMode = mode.toActivityMode()
+            _currentMode.value = activityMode
+            if (heartRateProvider is MockHeartRateProvider) {
+                heartRateProvider.setMode(activityMode)
+            }
+            MOCK_SONGS[mode]?.let { mock ->
+                _displayTitle.value = mock.title
+                _displayArtist.value = mock.artist
+                _displayFirstTag.value = mock.firstTag
+                _displayCoverColor.value = mock.coverColor
+            }
+            Log.i(TAG, "Mode Changed: $mode, Fetching Tags: ${mode.musicTags}, Target BPM: ${_currentHeartRate.value}")
             _isPanelExpanded.value = true
-            libraryRepository.getAllSongs(
-                object : LibraryRepository.SongsCallback {
-                    override fun onSuccess(songs: List<Song>?) {
-                        viewModelScope.launch(Dispatchers.Main.immediate) {
-                            val list = songs ?: emptyList()
-                            val song = list.firstOrNull()
-                            val url = song?.audioUrl?.takeIf { it.isNotEmpty() }
-                            if (url != null) {
-                                playFromApi(song, url)
-                            } else {
-                                playFromEssentials()
+
+            if (isNetworkAvailable()) {
+                Log.d(TAG, "HeartSync_Debug: Attempting API fetch...")
+                libraryRepository.getAllSongs(
+                    object : LibraryRepository.SongsCallback {
+                        override fun onSuccess(songs: List<Song>?) {
+                            viewModelScope.launch(Dispatchers.Main.immediate) {
+                                vm.handleSongsLoaded(songs)
+                            }
+                        }
+                        override fun onError(e: Exception?) {
+                            Log.d(TAG, "HeartSync_Debug: Network down, switching to Assets path.")
+                            viewModelScope.launch(Dispatchers.Main.immediate) {
+                                vm.playLocalAsset()
                             }
                         }
                     }
-                    override fun onError(e: Exception?) {
-                        Log.w(TAG, "API failed, falling back to essentials", e)
-                        viewModelScope.launch(Dispatchers.Main.immediate) {
-                            playFromEssentials()
-                        }
-                    }
-                }
-            )
+                )
+            } else {
+                Log.d(TAG, "HeartSync_Debug: Network down, switching to Assets path.")
+                vm.playLocalAsset()
+            }
         }
     }
 
-    private fun playFromApi(song: Song, url: String) {
+    internal fun handleSongsLoaded(songs: List<Song>?) {
+        val list = songs ?: emptyList()
+        val song = list.firstOrNull()
+        val url = song?.audioUrl?.takeIf { it.isNotEmpty() }
+        if (url != null && song != null) {
+            playFromApi(song, url)
+        } else {
+            playFromEssentials()
+        }
+    }
+
+    /** Play local asset from assets/essentials (e.g. zen.mp3, sync.mp3, overdrive.mp3). */
+    internal fun playLocalAsset() {
+        Log.d(TAG, "HeartSync_Debug: Offline Mode Active")
+        val mode = TerminalModeHolder.getCurrentMode()
+        val assetPath = when (mode) {
+            TerminalMode.ZEN -> "essentials/zen.mp3"
+            TerminalMode.SYNC -> "essentials/sync.mp3"
+            TerminalMode.OVERDRIVE -> "essentials/overdrive.mp3"
+        }
+        try {
+            getApplication<Application>().assets.open(assetPath).use { }
+            Log.d(TAG, "HeartSync_Debug: Asset file found and opened successfully: $assetPath")
+        } catch (e: Exception) {
+            Log.e(TAG, "HeartSync_Debug: FATAL: Cannot find asset file: ${e.message}")
+        }
+        playFromEssentials()
+    }
+
+    internal fun playFromApi(song: Song, url: String) {
         val mode = TerminalModeHolder.getCurrentMode()
         _playingMode.value = mode
-        Log.d(TAG, "HeartSync_Audio: Playing from API mode=$mode")
+        _playbackSource.value = "API"
 
         val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
         val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
@@ -408,38 +575,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         _displayCoverColor.value = null
     }
 
-    /** Fallback to bundled essentials when API fails or no network. */
-    private fun playFromEssentials() {
-        val mode = TerminalModeHolder.getCurrentMode()
-        _playingMode.value = mode
-        Log.d(TAG, "HeartSync_Audio: Playing from essentials mode=$mode")
-
-        val (resId, title, artist) = when (mode) {
-            TerminalMode.ZEN -> Triple(R.raw.essential_zen, "Eternal Peace (Offline)", "Calm Master")
-            TerminalMode.SYNC -> Triple(R.raw.essential_sync, "Digital Pulse (Offline)", "Sync Theory")
-            TerminalMode.OVERDRIVE -> Triple(R.raw.essential_overdrive, "System Overload (Offline)", "Kinetic Power")
-        }
-        val uri = Uri.parse("android.resource://${getApplication<android.app.Application>().packageName}/$resId")
-        val songId = "essential_${mode.name}"
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(songId)
-            .setUri(uri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
-                    .build()
-            )
-            .build()
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.play()
-        _isPanelExpanded.value = true
-        _currentSongId.value = songId
-        _displayTitle.value = title
-        _displayArtist.value = artist
-        _displayFirstTag.value = ""
-        _displayCoverColor.value = null
+    /** Play from assets/essentials or res/raw. useResRaw=true for fallback when assets fail. */
+    internal fun playFromEssentials(useResRaw: Boolean = false) {
+        doPlayEssentials(useResRaw)
     }
 
     /** Stop playback and clear media. Collapses the panel. Saves session if one was active. */
@@ -456,6 +594,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             player.stop()
             player.clearMediaItems()
             _playingMode.value = null
+            _playbackSource.value = "Idle"
             _isMusicPlaying.value = false
             _isPanelExpanded.value = false
             _currentTrackTitle.value = ""
@@ -557,10 +696,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 _collection.value = _collection.value.filter { !(it.songId == songId && it.mode == mode) }
                 archiveRepository.removeFromCollection(songId, mode)
                     .onFailure {
-                        Log.e(TAG, "Failed to remove from collection", it)
-                        withContext(Dispatchers.Main.immediate) {
-                            Toast.makeText(getApplication(), "無法從收藏移除", Toast.LENGTH_SHORT).show()
-                        }
+                        Log.e(TAG, "HeartSync_Debug: Failed to remove from collection", it)
                         removed?.let { _collection.value = _collection.value + it }
                     }
             } else {
@@ -578,10 +714,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 archiveRepository.addToCollection(songId, title, artist, mode, coverUrl)
                     .onSuccess { Log.d(TAG, "HeartSync_Debug: Added to collection successfully") }
                     .onFailure {
-                        Log.e(TAG, "Failed to add to collection", it)
-                        withContext(Dispatchers.Main.immediate) {
-                            Toast.makeText(getApplication(), "無法加入收藏（請確認已登入）", Toast.LENGTH_SHORT).show()
-                        }
+                        Log.e(TAG, "HeartSync_Debug: Failed to add to collection (check login)", it)
                         _collection.value = _collection.value.filter { !(it.songId == songId && it.mode == mode) }
                     }
             }

@@ -12,6 +12,9 @@
 #   public *;
 #}
 
+# Keep assets (essentials/*.mp3) - do not strip when minification enabled
+-keepclassmembers class **.R$raw { *; }
+
 # Uncomment this to preserve the line number information for
 # debugging stack traces.
 #-keepattributes SourceFile,LineNumberTable
