@@ -29,7 +29,6 @@ public class UserProfileActivity extends AppCompatActivity {
     private TextInputEditText etUsername;
     private TextInputEditText etEmail;
     private Button btnChangePassword;
-    private Button btnAnalyzeHistory;
     private Button btnLogout;
     private SharedPreferences prefs;
     private FirebaseAuth auth;
@@ -57,18 +56,11 @@ public class UserProfileActivity extends AppCompatActivity {
         etUsername = findViewById(R.id.et_username);
         etEmail = findViewById(R.id.et_email);
         btnChangePassword = findViewById(R.id.btn_change_password);
-        btnAnalyzeHistory = findViewById(R.id.btn_analyze_history);
         btnLogout = findViewById(R.id.btn_logout);
 
-        // 1. Load and display user profile data
         loadUserProfileData();
 
-        // 2. Set button click listeners
         btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
-        btnAnalyzeHistory.setOnClickListener(v -> {
-            Intent historyIntent = new Intent(UserProfileActivity.this, AnalyzeHistoryActivity.class);
-            startActivity(historyIntent);
-        });
         btnLogout.setOnClickListener(v -> performLogout());
     }
 
