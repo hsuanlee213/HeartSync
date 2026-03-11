@@ -34,7 +34,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Back"
                 android:padding="12dp"
-                android:src="@drawable/ic_back_white" />
+                android:src="@drawable/ic_back_cyan" />
 
             <TextView
                 android:layout_width="0dp"
@@ -49,11 +49,11 @@
         </LinearLayout>
 
         <View
-            android:layout_width="40dp"
+            android:layout_width="100dp"
             android:layout_height="2dp"
             android:layout_marginStart="48dp"
             android:layout_marginTop="8dp"
-            android:background="@color/tech_cyan" />
+            android:background="@drawable/bg_header_line_glow" />
     </LinearLayout>
 
     <ScrollView
@@ -123,18 +123,17 @@
                 android:textColor="@color/tech_label_gray"
                 android:textSize="13sp" />
 
-            <!-- Change Password Button (primary - cyan gradient) -->
+            <!-- Change Password Button (primary - cyan gradient + glow) -->
             <Button
                 android:id="@+id/btn_change_password"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="24dp"
-                android:background="@drawable/bg_btn_save_gradient"
-                android:elevation="8dp"
+                android:background="@drawable/bg_btn_change_password"
                 android:minHeight="0dp"
                 android:paddingVertical="14dp"
                 android:text="Change Password"
-                android:textColor="@android:color/white"
+                android:textColor="@android:color/black"
                 android:textStyle="bold" />
 
             <!-- Logout Button -->

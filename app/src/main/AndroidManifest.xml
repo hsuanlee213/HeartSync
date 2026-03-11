@@ -35,6 +35,10 @@
             android:name=".UserProfileActivity"
             android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
 
+        <activity
+            android:name=".AnalyzeHistoryActivity"
+            android:theme="@style/Theme.MaterialComponents.DayNight.NoActionBar" />
+
         <!-- MainActivity - NO launcher intent-filter, only declared ONCE -->
         <activity
             android:name=".MainActivity"
