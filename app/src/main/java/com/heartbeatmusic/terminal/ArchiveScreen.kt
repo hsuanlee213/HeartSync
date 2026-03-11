@@ -1,5 +1,7 @@
 package com.heartbeatmusic.terminal
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,23 +22,28 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
@@ -46,7 +53,6 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.SyncSession
-import com.heartbeatmusic.data.remote.ArchiveRepository
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -55,7 +61,9 @@ private val ArchiveBg = Color(0xFF1A1A2E)
 private val CyanBorder = Color.Cyan.copy(alpha = 0.3f)
 private val CyanText = Color.Cyan
 private val UnselectedGray = Color(0xFFB3B3B3)
-private val CardBg = Color(0x1AFFFFFF)
+private val CardBg = Color(0xFF252540)
+private val SwipeDeleteBg = Color(0xFF8B0000)
+private val SwipeDeleteBorder = Color(0xFFDC143C)
 
 private fun formatDate(date: Date): String =
     SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(date)
@@ -67,24 +75,22 @@ private fun modeIcon(mode: String): ImageVector = when (mode.uppercase()) {
 }
 
 @Composable
-fun ArchiveScreen(
-    archiveRepository: ArchiveRepository
-) {
+fun ArchiveScreen(viewModel: ArchiveViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
-    val sessionsFlow = remember { archiveRepository.sessionsFlow() }
-    val collectionFlow = remember { archiveRepository.collectionFlow() }
-    val sessions by sessionsFlow.collectAsStateWithLifecycle(initialValue = emptyList())
-    val collection by collectionFlow.collectAsStateWithLifecycle(initialValue = emptyList())
+    val sessions by viewModel.sessions.collectAsStateWithLifecycle(initialValue = emptyList())
+    val collection by viewModel.collection.collectAsStateWithLifecycle(initialValue = emptyList())
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(ArchiveBg)
     ) {
-        TabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
-        when (selectedTab) {
-            0 -> SessionsContent(sessions = sessions, archiveRepository = archiveRepository)
-            1 -> CollectionContent(items = collection)
+        Column(modifier = Modifier.fillMaxSize()) {
+            TabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
+            when (selectedTab) {
+                0 -> SessionsContent(sessions = sessions, viewModel = viewModel)
+                1 -> CollectionContent(items = collection)
+            }
         }
     }
 }
@@ -142,12 +148,15 @@ private fun Tab(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun SessionsContent(
     sessions: List<SyncSession>,
-    archiveRepository: ArchiveRepository
+    viewModel: ArchiveViewModel
 ) {
     var expandedSessionId by remember { mutableStateOf<String?>(null) }
+    val haptic = LocalHapticFeedback.current
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -155,33 +164,83 @@ private fun SessionsContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(sessions, key = { it.id }) { session ->
-            SessionCard(
-                session = session,
-                isExpanded = expandedSessionId == session.id,
-                onToggleExpand = {
-                    expandedSessionId = if (expandedSessionId == session.id) null else session.id
+            val dismissState = rememberSwipeToDismissBoxState(
+                confirmValueChange = { value ->
+                    if (value == SwipeToDismissBoxValue.EndToStart) {
+                        viewModel.deleteSession(session.id)
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        true
+                    } else {
+                        false
+                    }
                 },
-                archiveRepository = archiveRepository
+                positionalThreshold = { totalWidth -> totalWidth * 0.4f }
+            )
+            SwipeToDismissBox(
+                state = dismissState,
+                enableDismissFromStartToEnd = false,
+                enableDismissFromEndToStart = true,
+                backgroundContent = {
+                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(SwipeDeleteBg)
+                                .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.CenterEnd
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Delete",
+                                tint = Color.White,
+                                modifier = Modifier.padding(end = 24.dp)
+                            )
+                        }
+                    } else {
+                        Box(modifier = Modifier.fillMaxSize())
+                    }
+                },
+                content = {
+                    SessionCard(
+                        session = session,
+                        isExpanded = expandedSessionId == session.id,
+                        onToggleExpand = {
+                            expandedSessionId = if (expandedSessionId == session.id) null else session.id
+                        },
+                        viewModel = viewModel
+                    )
+                }
             )
         }
     }
 }
+
+private val detailLabelStyle = TextStyle(
+    fontFamily = FontFamily.Monospace,
+    fontSize = 14.sp,
+    fontWeight = FontWeight.Medium,
+    color = Color.White,
+    platformStyle = PlatformTextStyle(includeFontPadding = false)
+)
 
 @Composable
 private fun SessionCard(
     session: SyncSession,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
-    archiveRepository: ArchiveRepository
+    viewModel: ArchiveViewModel
 ) {
     val shortId = session.id.takeLast(8).uppercase()
     val dateStr = formatDate(Date(session.endTimestamp))
     val durationStr = "${session.durationMinutes}m"
+    val songCount = session.songIds.size
     val songs = session.songIds.zip(session.songTitles) { id, title -> id to title }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(200))
             .clip(RoundedCornerShape(12.dp))
             .background(CardBg)
             .border(1.dp, CyanBorder, RoundedCornerShape(12.dp))
@@ -205,7 +264,7 @@ private fun SessionCard(
                     fontWeight = FontWeight.Bold,
                     color = CyanText
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -216,12 +275,20 @@ private fun SessionCard(
                         tint = CyanBorder,
                         modifier = Modifier.size(18.dp)
                     )
-                    Text(
-                        text = "$dateStr | $durationStr",
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 12.sp,
-                        color = UnselectedGray
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "DATE: $dateStr",
+                            style = detailLabelStyle
+                        )
+                        Text(
+                            text = "DURATION: $durationStr",
+                            style = detailLabelStyle
+                        )
+                        Text(
+                            text = "SONGS: $songCount",
+                            style = detailLabelStyle
+                        )
+                    }
                 }
             }
         }
@@ -233,7 +300,7 @@ private fun SessionCard(
                         songId = id,
                         title = title,
                         mode = session.mode,
-                        archiveRepository = archiveRepository
+                        viewModel = viewModel
                     )
                 }
             }
@@ -244,6 +311,7 @@ private fun SessionCard(
 private val expandedTextStyle = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontSize = 14.sp,
+    color = Color.White,
     platformStyle = PlatformTextStyle(includeFontPadding = false)
 )
 
@@ -251,6 +319,7 @@ private val expandedButtonStyle = TextStyle(
     fontFamily = FontFamily.Monospace,
     fontSize = 12.sp,
     fontWeight = FontWeight.Bold,
+    color = CyanText,
     platformStyle = PlatformTextStyle(includeFontPadding = false)
 )
 
@@ -259,9 +328,8 @@ private fun SessionSongItem(
     songId: String,
     title: String,
     mode: String,
-    archiveRepository: ArchiveRepository
+    viewModel: ArchiveViewModel
 ) {
-    val scope = rememberCoroutineScope()
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -277,25 +345,16 @@ private fun SessionSongItem(
         ) {
             Text(
                 text = title.ifEmpty { "Unknown" },
-                style = expandedTextStyle,
-                color = Color.White
+                style = expandedTextStyle
             )
             Text(
                 text = "+ COLLECTION",
                 style = expandedButtonStyle,
-                color = CyanText,
                 modifier = Modifier.clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {
-                        scope.launch(Dispatchers.IO) {
-                            archiveRepository.addToCollection(
-                                songId = songId,
-                                title = title,
-                                artist = "",
-                                mode = mode
-                            )
-                        }
+                        viewModel.addToCollection(songId, title, "", mode)
                     }
                 )
             )

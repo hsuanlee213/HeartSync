@@ -110,6 +110,13 @@ class ArchiveRepository {
             .await()
     }
 
+    suspend fun deleteSession(sessionId: String): Result<Unit> = runCatching {
+        db.collection(FirestoreCollections.SYNC_SESSIONS)
+            .document(sessionId)
+            .delete()
+            .await()
+    }
+
     suspend fun removeFromCollection(songId: String): Result<Unit> = runCatching {
         val uid = currentUserId() ?: throw IllegalStateException("Not logged in")
         val docs = db.collection(FirestoreCollections.USERS)

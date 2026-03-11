@@ -6,12 +6,10 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import com.heartbeatmusic.R
-import com.heartbeatmusic.data.remote.ArchiveRepository
 
 class ArchiveFragment : Fragment() {
-
-    private val archiveRepository = ArchiveRepository()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -23,8 +21,9 @@ class ArchiveFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
+        val viewModel = ViewModelProvider(requireActivity())[ArchiveViewModel::class.java]
         (view.findViewById<ComposeView>(R.id.archive_compose))?.setContent {
-            ArchiveScreen(archiveRepository = archiveRepository)
+            ArchiveScreen(viewModel = viewModel)
         }
     }
 }
