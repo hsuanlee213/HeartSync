@@ -6,8 +6,11 @@ import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.PlayerHolder
 import com.heartbeatmusic.data.model.Song
+import com.heartbeatmusic.data.model.SyncSession
+import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.terminal.TerminalModeHolder
 import com.heartbeatmusic.terminal.toActivityMode
@@ -22,6 +25,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
@@ -106,7 +110,12 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     private val player = PlayerHolder.getInstance(application).getPlayer()
     private val libraryRepository = LibraryRepository()
+    private val archiveRepository = ArchiveRepository()
     private var progressJob: Job? = null
+
+    private var sessionStartTime: Long? = null
+    private var sessionMode: TerminalMode? = null
+    private val sessionSongs = mutableListOf<Pair<String, String>>()
 
     init {
         collectHeartRate()
@@ -119,7 +128,21 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 viewModelScope.launch(Dispatchers.Main.immediate) {
                     _isMusicPlaying.value = isPlaying
-                    if (isPlaying) startProgressUpdates() else stopProgressUpdates()
+                    if (isPlaying) {
+                        if (sessionStartTime == null) {
+                            sessionStartTime = System.currentTimeMillis()
+                            sessionMode = TerminalModeHolder.getCurrentMode()
+                            val mediaItem = player.currentMediaItem
+                            if (mediaItem != null) {
+                                val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
+                                val title = mediaItem.mediaMetadata.title?.toString() ?: ""
+                                if (title.isNotEmpty()) sessionSongs.add(songId to title)
+                            }
+                        }
+                        startProgressUpdates()
+                    } else {
+                        stopProgressUpdates()
+                    }
                 }
             }
 
@@ -135,6 +158,11 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                         _displayArtist.value = md?.artist?.toString() ?: ""
                         _displayFirstTag.value = ""
                         _displayCoverColor.value = null
+                        if (player.isPlaying && sessionStartTime != null) {
+                            val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
+                            val title = md?.title?.toString() ?: ""
+                            if (title.isNotEmpty()) sessionSongs.add(songId to title)
+                        }
                     }
                 }
             }
@@ -243,7 +271,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                             val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
                             val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
                             val coverUrl = song.coverUrl
+                            val songId = song.id?.takeIf { it.isNotEmpty() } ?: ""
                             val mediaItem = MediaItem.Builder()
+                                .setMediaId(songId)
                                 .setUri(Uri.parse(url))
                                 .setMediaMetadata(
                                     MediaMetadata.Builder()
@@ -269,9 +299,16 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /** Stop playback and clear media. Collapses the panel. Resets to initial state. */
+    /** Stop playback and clear media. Collapses the panel. Saves session if one was active. */
     fun stop() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
+            val start = sessionStartTime
+            val mode = sessionMode
+            val songs = sessionSongs.toList()
+            sessionStartTime = null
+            sessionMode = null
+            sessionSongs.clear()
+
             player.stop()
             player.clearMediaItems()
             _isMusicPlaying.value = false
@@ -285,6 +322,28 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _displayCoverColor.value = null
             _playbackProgress.value = 0f
             stopProgressUpdates()
+
+            if (start != null && mode != null) {
+                val uid = FirebaseAuth.getInstance().currentUser?.uid
+                if (uid != null) {
+                    val endTime = System.currentTimeMillis()
+                    val durationMinutes = ((endTime - start) / 60_000).toInt().coerceAtLeast(0)
+                    val session = SyncSession(
+                        id = "session_${start}",
+                        userId = uid,
+                        mode = mode.name,
+                        startTimestamp = start,
+                        endTimestamp = endTime,
+                        durationMinutes = durationMinutes,
+                        songIds = songs.map { it.first },
+                        songTitles = songs.map { it.second }
+                    )
+                    viewModelScope.launch {
+                        archiveRepository.saveSession(session)
+                            .onFailure { Log.e(TAG, "Failed to save session", it) }
+                    }
+                }
+            }
         }
     }
 

@@ -3,15 +3,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/deep_purple"
+    android:background="@color/tech_bg_dark"
     tools:context=".terminal.ArchiveFragment">
 
-    <TextView
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="Archive (Logs)"
-        android:textColor="@color/white"
-        android:textSize="18sp" />
+    <androidx.compose.ui.platform.ComposeView
+        android:id="@+id/archive_compose"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
 </FrameLayout>
