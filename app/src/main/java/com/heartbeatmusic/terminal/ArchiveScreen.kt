@@ -3,6 +3,7 @@ package com.heartbeatmusic.terminal
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,9 +12,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,7 +30,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Sync
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarData
@@ -35,10 +38,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.SwipeToDismissBox
-import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,8 +46,14 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.spring
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -203,7 +209,9 @@ private fun Tab(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+private val TrashRevealWidth = 80.dp
+private val SnapThreshold = 40.dp
+
 @Composable
 private fun SessionsContent(
     sessions: List<SyncSession>,
@@ -212,15 +220,19 @@ private fun SessionsContent(
     snackbarHostState: SnackbarHostState
 ) {
     var expandedSessionId by remember { mutableStateOf<String?>(null) }
+    var deletingSessionIds by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+    val density = LocalDensity.current
 
-    fun handleSessionDismissed(session: SyncSession) {
+    fun handleTrashClick(session: SyncSession) {
         scope.launch {
+            deletingSessionIds = deletingSessionIds + session.id
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             delay(350)
             val sessionToRestore = session
             viewModel.removeSessionFromUI(session.id)
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            deletingSessionIds = deletingSessionIds - session.id
             val result = snackbarHostState.showSnackbar(
                 message = "Session removed",
                 actionLabel = "UNDO",
@@ -244,52 +256,123 @@ private fun SessionsContent(
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(sessions, key = { "${it.id}_${restoreTokens[it.id] ?: 0}" }) { session ->
-            val dismissState = rememberSwipeToDismissBoxState(
-                confirmValueChange = { value ->
-                    value == SwipeToDismissBoxValue.EndToStart
+            SessionListItemWithReveal(
+                session = session,
+                isExpanded = expandedSessionId == session.id,
+                onToggleExpand = {
+                    expandedSessionId = if (expandedSessionId == session.id) null else session.id
                 },
-                positionalThreshold = { totalWidth -> totalWidth * 0.5f }
+                isDeleting = session.id in deletingSessionIds,
+                onTrashClick = { handleTrashClick(session) },
+                viewModel = viewModel,
+                density = density
             )
-            LaunchedEffect(dismissState.currentValue) {
-                if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                    handleSessionDismissed(session)
-                }
+        }
+    }
+}
+
+@Composable
+private fun SessionListItemWithReveal(
+    session: SyncSession,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    isDeleting: Boolean,
+    onTrashClick: () -> Unit,
+    viewModel: ArchiveViewModel,
+    density: androidx.compose.ui.unit.Density
+) {
+    val offsetPx = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val maxOffsetPx = with(density) { TrashRevealWidth.toPx() }
+    val thresholdPx = with(density) { SnapThreshold.toPx() }
+
+    LaunchedEffect(isDeleting) {
+        if (isDeleting) {
+            offsetPx.snapTo(0f)
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .animateContentSize(animationSpec = tween(350))
+            .heightIn(min = if (isDeleting) 0.dp else 1.dp)
+    ) {
+        if (isDeleting) return@Box
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .width(TrashRevealWidth)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(SwipeDeleteBg)
+                    .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(12.dp))
+                    .clickable(onClick = onTrashClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = "Delete",
+                    tint = Color.White
+                )
             }
-            SwipeToDismissBox(
-                state = dismissState,
-                enableDismissFromStartToEnd = false,
-                enableDismissFromEndToStart = true,
-                backgroundContent = {
-                    if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(SwipeDeleteBg)
-                                .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.CenterEnd
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Delete,
-                                contentDescription = "Delete",
-                                tint = Color.White
-                            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset { IntOffset(offsetPx.value.toInt(), 0) }
+                    .clickable(
+                        enabled = offsetPx.value != 0f,
+                        onClick = {
+                            scope.launch {
+                                offsetPx.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
                         }
-                    } else {
-                        Box(modifier = Modifier.fillMaxSize())
-                    }
-                },
-                content = {
-                    SessionCard(
-                        session = session,
-                        isExpanded = expandedSessionId == session.id,
-                        onToggleExpand = {
-                            expandedSessionId = if (expandedSessionId == session.id) null else session.id
-                        },
-                        viewModel = viewModel
                     )
-                }
-            )
+                    .pointerInput(Unit) {
+                        detectHorizontalDragGestures(
+                            onDragEnd = {
+                                scope.launch {
+                                    val current = offsetPx.value
+                                    val target = if (current < -thresholdPx) -maxOffsetPx else 0f
+                                    offsetPx.animateTo(
+                                        targetValue = target,
+                                        animationSpec = spring(
+                                            dampingRatio = Spring.DampingRatioMediumBouncy,
+                                            stiffness = Spring.StiffnessLow
+                                        )
+                                    )
+                                }
+                            },
+                            onHorizontalDrag = { _, dragAmount ->
+                                scope.launch {
+                                    val newOffset = (offsetPx.value + dragAmount)
+                                        .coerceIn(-maxOffsetPx, 0f)
+                                    offsetPx.snapTo(newOffset)
+                                }
+                            }
+                        )
+                    }
+            ) {
+                SessionCard(
+                    session = session,
+                    isExpanded = isExpanded,
+                    onToggleExpand = onToggleExpand,
+                    viewModel = viewModel
+                )
+            }
         }
     }
 }
