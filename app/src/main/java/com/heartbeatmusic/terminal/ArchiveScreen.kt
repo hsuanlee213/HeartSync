@@ -144,6 +144,7 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
     val sessions by viewModel.sessions.collectAsStateWithLifecycle(initialValue = emptyList())
     val restoreTokens by viewModel.restoreTokens.collectAsStateWithLifecycle(initialValue = emptyMap())
     val collection by viewModel.collection.collectAsStateWithLifecycle(initialValue = emptyList())
+    val collectionRestoreTokens by viewModel.collectionRestoreTokens.collectAsStateWithLifecycle(initialValue = emptyMap())
 
     Box(
         modifier = Modifier
@@ -159,7 +160,12 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
                     viewModel = viewModel,
                     snackbarHostState = snackbarHostState
                 )
-                1 -> CollectionContent(items = collection, viewModel = viewModel)
+                1 -> CollectionContent(
+                    items = collection,
+                    collectionRestoreTokens = collectionRestoreTokens,
+                    viewModel = viewModel,
+                    snackbarHostState = snackbarHostState
+                )
             }
         }
         SnackbarHost(
@@ -541,18 +547,52 @@ private fun SessionSongItem(
 }
 
 @Composable
-private fun CollectionContent(items: List<CollectionItem>, viewModel: ArchiveViewModel) {
+private fun CollectionContent(
+    items: List<CollectionItem>,
+    collectionRestoreTokens: Map<String, Int>,
+    viewModel: ArchiveViewModel,
+    snackbarHostState: SnackbarHostState
+) {
+    var deletingCollectionIds by remember { mutableStateOf(setOf<String>()) }
+    val scope = rememberCoroutineScope()
+    val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
+
+    fun handleTrashClick(item: CollectionItem) {
+        scope.launch {
+            deletingCollectionIds = deletingCollectionIds + item.id
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            delay(350)
+            val itemToRestore = item
+            viewModel.removeCollectionFromUI(item)
+            deletingCollectionIds = deletingCollectionIds - item.id
+            val result = snackbarHostState.showSnackbar(
+                message = "Song removed from collection",
+                actionLabel = "UNDO",
+                duration = SnackbarDuration.Long
+            )
+            when (result) {
+                SnackbarResult.ActionPerformed -> {
+                    viewModel.restoreCollectionItem(itemToRestore)
+                }
+                SnackbarResult.Dismissed -> {
+                    viewModel.deleteCollectionFromDb(itemToRestore)
+                }
+            }
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(items, key = { it.id }) { item ->
+        items(items, key = { "${it.id}_${collectionRestoreTokens[it.id] ?: 0}" }) { item ->
             CollectionListItemWithReveal(
                 item = item,
-                onTrashClick = { viewModel.removeFromCollection(item.songId, item.mode) },
+                isDeleting = item.id in deletingCollectionIds,
+                onTrashClick = { handleTrashClick(item) },
                 density = density
             )
         }
@@ -562,6 +602,7 @@ private fun CollectionContent(items: List<CollectionItem>, viewModel: ArchiveVie
 @Composable
 private fun CollectionListItemWithReveal(
     item: CollectionItem,
+    isDeleting: Boolean,
     onTrashClick: () -> Unit,
     density: androidx.compose.ui.unit.Density
 ) {
@@ -570,11 +611,25 @@ private fun CollectionListItemWithReveal(
     val maxOffsetPx = with(density) { TrashRevealWidth.toPx() }
     val thresholdPx = with(density) { SnapThreshold.toPx() }
 
+    LaunchedEffect(isDeleting) {
+        if (isDeleting) {
+            offsetPx.snapTo(0f)
+        }
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
+            .animateContentSize(animationSpec = tween(350))
+            .heightIn(min = if (isDeleting) 0.dp else 1.dp)
     ) {
+        if (isDeleting) return@Box
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+        ) {
         // Background layer: trash button fixed on the right, hidden until card slides away
         Box(
             modifier = Modifier
@@ -639,6 +694,7 @@ private fun CollectionListItemWithReveal(
                 }
         ) {
             CollectionCard(item = item, onClick = { /* TODO: play or show detail */ })
+        }
         }
     }
 }
