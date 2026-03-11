@@ -370,8 +370,6 @@ private fun CollapsedPanel(onPlayClick: () -> Unit, accentColor: Color) {
     }
 }
 
-private val FavoriteCyan = Color.Cyan
-
 @Composable
 private fun ExpandedPanel(
     trackTitle: String,
@@ -510,7 +508,7 @@ private fun ExpandedPanel(
                     Icon(
                         imageVector = if (isInCollection) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
                         contentDescription = if (isInCollection) "Remove from collection" else "Add to collection",
-                        tint = FavoriteCyan
+                        tint = accentColor
                     )
                 }
             }

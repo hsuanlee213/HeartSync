@@ -89,10 +89,14 @@ private val CardBg = Color(0xFF252540)
 private val SwipeDeleteBg = Color(0xFF8B0000)
 private val SwipeDeleteBorder = Color(0xFFDC143C)
 
-private fun modeTagColors(mode: String): Pair<Color, Color> = when (mode.uppercase()) {
-    "ZEN" -> Color(0xFF1B5E20).copy(alpha = 0.3f) to Color(0xFF76FF03)
-    "OVERDRIVE" -> Color(0xFF4A148C).copy(alpha = 0.3f) to Color(0xFFFF5252)
-    else -> Color(0xFF0D47A1).copy(alpha = 0.3f) to Color(0xFF40C4FF)
+/** Align with TerminalMode.accentColor for consistent visual language. */
+private fun modeTagColors(mode: String): Pair<Color, Color> {
+    val accent = when (mode.uppercase()) {
+        "ZEN" -> TerminalMode.ZEN.accentColor
+        "OVERDRIVE" -> TerminalMode.OVERDRIVE.accentColor
+        else -> TerminalMode.SYNC.accentColor
+    }
+    return accent.copy(alpha = 0.3f) to accent
 }
 
 private fun formatDate(date: Date): String =
