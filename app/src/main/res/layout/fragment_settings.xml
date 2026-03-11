@@ -92,10 +92,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="RESPONSE SENSITIVITY"
-                android:textColor="@color/tech_label_gray"
+                android:textColor="@color/sync_engine_label"
                 android:fontFamily="monospace"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_response"
                 android:layout_width="match_parent"
@@ -112,10 +114,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="SYNC TOLERANCE"
-                android:textColor="@color/tech_label_gray"
+                android:textColor="@color/sync_engine_label"
                 android:fontFamily="monospace"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_tolerance"
                 android:layout_width="match_parent"
@@ -132,10 +136,12 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:text="CROSSFADE SPEED"
-                android:textColor="@color/tech_label_gray"
+                android:textColor="@color/sync_engine_label"
                 android:fontFamily="monospace"
-                android:textSize="12sp"
-                android:layout_marginBottom="4dp" />
+                android:textSize="13sp"
+                android:textStyle="bold"
+                android:letterSpacing="0.08"
+                android:layout_marginBottom="8dp" />
             <com.google.android.material.slider.Slider
                 android:id="@+id/slider_crossfade"
                 android:layout_width="match_parent"

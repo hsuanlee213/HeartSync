@@ -12,4 +12,5 @@
     <color name="tech_stroke_default">#4D4D4D</color>
     <color name="tech_cyan_border">#4D00FFFF</color>
     <color name="tech_input_bg_transparent">#00000000</color>
+    <color name="sync_engine_label">#E0E0E0</color>
 </resources>
