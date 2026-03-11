@@ -10,4 +10,20 @@
         <item name="cursorColor">@color/tech_cyan</item>
         <item name="startIconTint">@color/tech_cyan</item>
     </style>
+
+    <!-- Tech style for dialog password fields -->
+    <style name="TechTextInputLayoutDialog" parent="Widget.MaterialComponents.TextInputLayout.FilledBox">
+        <item name="boxBackgroundColor">@color/tech_input_bg_transparent</item>
+        <item name="boxStrokeColor">@color/tech_stroke_color</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextColor">@color/tech_label_gray</item>
+        <item name="android:textColorHint">@color/tech_label_gray</item>
+        <item name="cursorColor">@color/tech_cyan</item>
+        <item name="endIconTint">@color/tech_cyan</item>
+    </style>
+
+    <!-- Change Password dialog theme -->
+    <style name="TechDialogTheme" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorSurface">@color/tech_bg_dark</item>
+    </style>
 </resources>

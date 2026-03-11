@@ -4,14 +4,14 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.util.Log;
+import android.app.Dialog;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -99,33 +99,44 @@ public class UserProfileActivity extends AppCompatActivity {
             return;
         }
 
+        Dialog dialog = new Dialog(this, R.style.TechChangePasswordDialog);
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_change_password, null);
-        final EditText currentPassword = dialogView.findViewById(R.id.et_current_password);
-        final EditText newPassword = dialogView.findViewById(R.id.et_new_password);
-        final EditText confirmNewPassword = dialogView.findViewById(R.id.et_confirm_new_password);
+        dialog.setContentView(dialogView);
+        dialog.setCancelable(true);
 
-        new AlertDialog.Builder(this)
-                .setTitle("Change Password")
-                .setView(dialogView)
-                .setPositiveButton("Update", (dialog, which) -> {
-                    String currentPwd = currentPassword.getText().toString();
-                    String newPwd = newPassword.getText().toString();
-                    String confirmPwd = confirmNewPassword.getText().toString();
+        Window window = dialog.getWindow();
+        if (window != null) {
+            window.setBackgroundDrawableResource(android.R.color.transparent);
+        }
 
-                    if (currentPwd.isEmpty() || newPwd.isEmpty() || confirmPwd.isEmpty()) {
-                        Toast.makeText(this, "All fields are required.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+        final TextInputEditText currentPassword = dialogView.findViewById(R.id.et_current_password);
+        final TextInputEditText newPassword = dialogView.findViewById(R.id.et_new_password);
+        final TextInputEditText confirmNewPassword = dialogView.findViewById(R.id.et_confirm_new_password);
+        Button btnCancel = dialogView.findViewById(R.id.btn_dialog_cancel);
+        Button btnSave = dialogView.findViewById(R.id.btn_dialog_save);
 
-                    if (!newPwd.equals(confirmPwd)) {
-                        Toast.makeText(this, "New passwords do not match.", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
 
-                    handlePasswordChange(user, user.getEmail(), currentPwd, newPwd);
-                })
-                .setNegativeButton("Cancel", null)
-                .show();
+        btnSave.setOnClickListener(v -> {
+            String currentPwd = currentPassword.getText().toString();
+            String newPwd = newPassword.getText().toString();
+            String confirmPwd = confirmNewPassword.getText().toString();
+
+            if (currentPwd.isEmpty() || newPwd.isEmpty() || confirmPwd.isEmpty()) {
+                Toast.makeText(this, "All fields are required.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            if (!newPwd.equals(confirmPwd)) {
+                Toast.makeText(this, "New passwords do not match.", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            dialog.dismiss();
+            handlePasswordChange(user, user.getEmail(), currentPwd, newPwd);
+        });
+
+        dialog.show();
     }
 
     private void handlePasswordChange(FirebaseUser user, String email, String currentPassword, String newPassword) {
