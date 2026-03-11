@@ -111,14 +111,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setupToolbar() {
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
-        toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_library) {
-                startActivity(new Intent(this, MusicLibraryActivity.class));
-                return true;
-            }
-            return false;
-        });
+        // Toolbar: no menu items; Archive is the data entry point
     }
 
     private void setupProfileButton() {

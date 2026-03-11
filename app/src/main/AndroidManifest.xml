@@ -60,10 +60,6 @@
             android:name=".ModeAdapter"
             android:exported="false" />
 
-        <activity
-            android:name=".MusicLibraryActivity"
-            android:exported="false" />
-
     </application>
 
 </manifest>

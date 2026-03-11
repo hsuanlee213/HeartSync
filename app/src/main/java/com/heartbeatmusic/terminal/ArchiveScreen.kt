@@ -1,7 +1,11 @@
 package com.heartbeatmusic.terminal
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -153,19 +157,28 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
-            when (selectedTab) {
-                0 -> SessionsContent(
-                    sessions = sessions,
-                    restoreTokens = restoreTokens,
-                    viewModel = viewModel,
-                    snackbarHostState = snackbarHostState
-                )
-                1 -> CollectionContent(
-                    items = collection,
-                    collectionRestoreTokens = collectionRestoreTokens,
-                    viewModel = viewModel,
-                    snackbarHostState = snackbarHostState
-                )
+            AnimatedContent(
+                targetState = selectedTab,
+                modifier = Modifier.fillMaxSize(),
+                transitionSpec = {
+                    fadeIn(animationSpec = tween(200)).togetherWith(fadeOut(animationSpec = tween(200)))
+                },
+                label = "ArchiveTab"
+            ) { tab ->
+                when (tab) {
+                    0 -> SessionsContent(
+                        sessions = sessions,
+                        restoreTokens = restoreTokens,
+                        viewModel = viewModel,
+                        snackbarHostState = snackbarHostState
+                    )
+                    else -> CollectionContent(
+                        items = collection,
+                        collectionRestoreTokens = collectionRestoreTokens,
+                        viewModel = viewModel,
+                        snackbarHostState = snackbarHostState
+                    )
+                }
             }
         }
         SnackbarHost(

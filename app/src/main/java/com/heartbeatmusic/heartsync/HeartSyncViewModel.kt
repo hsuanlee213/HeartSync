@@ -16,6 +16,7 @@ import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.terminal.TerminalModeHolder
 import com.heartbeatmusic.terminal.toActivityMode
+import com.heartbeatmusic.R
 import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -294,40 +295,82 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     override fun onSuccess(songs: List<Song>?) {
                         viewModelScope.launch(Dispatchers.Main.immediate) {
                             val list = songs ?: emptyList()
-                            if (list.isEmpty()) return@launch
-                            val song = list[0]
-                            val url = song.audioUrl ?: return@launch
-                            if (url.isEmpty()) return@launch
-                            val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
-                            val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
-                            val coverUrl = song.coverUrl
-                            val songId = song.id?.takeIf { it.isNotEmpty() } ?: ""
-                            val mediaItem = MediaItem.Builder()
-                                .setMediaId(songId)
-                                .setUri(Uri.parse(url))
-                                .setMediaMetadata(
-                                    MediaMetadata.Builder()
-                                        .setTitle(title)
-                                        .setArtist(artist)
-                                        .setArtworkUri(coverUrl?.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) })
-                                        .build()
-                                )
-                                .build()
-                            player.setMediaItem(mediaItem)
-                            player.prepare()
-                            player.play()
-                            _isPanelExpanded.value = true
-                            _currentSongId.value = songId
-                            _displayTitle.value = title
-                            _displayArtist.value = artist
-                            _displayFirstTag.value = ""
-                            _displayCoverColor.value = null
+                            val song = list.firstOrNull()
+                            val url = song?.audioUrl?.takeIf { it.isNotEmpty() }
+                            if (url != null) {
+                                playFromApi(song, url)
+                            } else {
+                                playFromEssentials()
+                            }
                         }
                     }
-                    override fun onError(e: Exception?) {}
+                    override fun onError(e: Exception?) {
+                        Log.w(TAG, "API failed, falling back to essentials", e)
+                        viewModelScope.launch(Dispatchers.Main.immediate) {
+                            playFromEssentials()
+                        }
+                    }
                 }
             )
         }
+    }
+
+    private fun playFromApi(song: Song, url: String) {
+        val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
+        val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
+        val coverUrl = song.coverUrl
+        val songId = song.id?.takeIf { it.isNotEmpty() } ?: ""
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(songId)
+            .setUri(Uri.parse(url))
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .setArtworkUri(coverUrl?.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) })
+                    .build()
+            )
+            .build()
+        player.setMediaItem(mediaItem)
+        player.prepare()
+        player.play()
+        _isPanelExpanded.value = true
+        _currentSongId.value = songId
+        _displayTitle.value = title
+        _displayArtist.value = artist
+        _displayFirstTag.value = ""
+        _displayCoverColor.value = null
+    }
+
+    /** Fallback to bundled essentials when API fails or no network. */
+    private fun playFromEssentials() {
+        val mode = TerminalModeHolder.getCurrentMode()
+        val (resId, title, artist) = when (mode) {
+            TerminalMode.ZEN -> Triple(R.raw.essential_zen, "Eternal Peace (Offline)", "Calm Master")
+            TerminalMode.SYNC -> Triple(R.raw.essential_sync, "Digital Pulse (Offline)", "Sync Theory")
+            TerminalMode.OVERDRIVE -> Triple(R.raw.essential_overdrive, "System Overload (Offline)", "Kinetic Power")
+        }
+        val uri = Uri.parse("android.resource://${getApplication<android.app.Application>().packageName}/$resId")
+        val songId = "essential_${mode.name}"
+        val mediaItem = MediaItem.Builder()
+            .setMediaId(songId)
+            .setUri(uri)
+            .setMediaMetadata(
+                MediaMetadata.Builder()
+                    .setTitle(title)
+                    .setArtist(artist)
+                    .build()
+            )
+            .build()
+        player.setMediaItem(mediaItem)
+        player.prepare()
+        player.play()
+        _isPanelExpanded.value = true
+        _currentSongId.value = songId
+        _displayTitle.value = title
+        _displayArtist.value = artist
+        _displayFirstTag.value = ""
+        _displayCoverColor.value = null
     }
 
     /** Stop playback and clear media. Collapses the panel. Saves session if one was active. */

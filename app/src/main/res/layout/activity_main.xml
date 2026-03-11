@@ -15,7 +15,6 @@
         android:background="@color/deep_purple"
         app:titleTextColor="@android:color/white"
         app:title="HeartSync"
-        app:menu="@menu/main_toolbar_menu"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
