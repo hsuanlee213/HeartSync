@@ -89,6 +89,12 @@ private val CardBg = Color(0xFF252540)
 private val SwipeDeleteBg = Color(0xFF8B0000)
 private val SwipeDeleteBorder = Color(0xFFDC143C)
 
+private fun modeTagColors(mode: String): Pair<Color, Color> = when (mode.uppercase()) {
+    "ZEN" -> Color(0xFF1B5E20).copy(alpha = 0.3f) to Color(0xFF76FF03)
+    "OVERDRIVE" -> Color(0xFF4A148C).copy(alpha = 0.3f) to Color(0xFFFF5252)
+    else -> Color(0xFF0D47A1).copy(alpha = 0.3f) to Color(0xFF40C4FF)
+}
+
 private fun formatDate(date: Date): String =
     SimpleDateFormat("yyyy.MM.dd", Locale.getDefault()).format(date)
 
@@ -688,16 +694,32 @@ private fun CollectionCard(
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            Text(
-                text = buildString {
-                    append(item.artist.ifEmpty { "Unknown" })
-                    append(" | ")
-                    append(item.mode.uppercase())
-                },
-                fontFamily = FontFamily.Monospace,
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.7f)
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = item.artist.ifEmpty { "Unknown" },
+                    fontFamily = FontFamily.Monospace,
+                    fontSize = 12.sp,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+                val (bgColor, textColor) = modeTagColors(item.mode)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(50))
+                        .background(bgColor)
+                        .padding(horizontal = 8.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = item.mode.uppercase(),
+                        fontFamily = FontFamily.Monospace,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textColor
+                    )
+                }
+            }
         }
     }
 }

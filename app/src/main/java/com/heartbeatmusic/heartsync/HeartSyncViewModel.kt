@@ -3,6 +3,7 @@ package com.heartbeatmusic.heartsync
 import android.net.Uri
 import android.app.Application
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -417,17 +418,47 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /** Add current track to Collection. Uses current songId, track title/artist, coverUrl, and TerminalMode. */
-    fun addCurrentToCollection() {
+    /** Toggle current track in Collection: add if not in, remove if in. Syncs with Archive tab. */
+    fun toggleCollection() {
         viewModelScope.launch(Dispatchers.IO) {
             val songId = _currentSongId.value
             if (songId.isEmpty()) return@launch
+            val inCollection = _collection.value.any { it.songId == songId }
             val title = _currentTrackTitle.value.ifEmpty { _displayTitle.value }.ifEmpty { "Unknown" }
             val artist = _currentTrackArtist.value.ifEmpty { _displayArtist.value }
             val coverUrl = _currentCoverUrl.value ?: ""
             val mode = TerminalModeHolder.getCurrentMode().name
-            archiveRepository.addToCollection(songId, title, artist, mode, coverUrl)
-                .onFailure { Log.e(TAG, "Failed to add to collection", it) }
+
+            if (inCollection) {
+                val removed = _collection.value.find { it.songId == songId }
+                _collection.value = _collection.value.filter { it.songId != songId }
+                archiveRepository.removeFromCollection(songId)
+                    .onFailure {
+                        Log.e(TAG, "Failed to remove from collection", it)
+                        withContext(Dispatchers.Main.immediate) {
+                            Toast.makeText(getApplication(), "無法從收藏移除", Toast.LENGTH_SHORT).show()
+                        }
+                        removed?.let { _collection.value = _collection.value + it }
+                    }
+            } else {
+                val newItem = CollectionItem(
+                    id = songId,
+                    songId = songId,
+                    title = title,
+                    artist = artist,
+                    mode = mode,
+                    coverUrl = coverUrl
+                )
+                _collection.value = _collection.value + newItem
+                archiveRepository.addToCollection(songId, title, artist, mode, coverUrl)
+                    .onFailure {
+                        Log.e(TAG, "Failed to add to collection", it)
+                        withContext(Dispatchers.Main.immediate) {
+                            Toast.makeText(getApplication(), "無法加入收藏（請確認已登入）", Toast.LENGTH_SHORT).show()
+                        }
+                        _collection.value = _collection.value.filter { it.songId != songId }
+                    }
+            }
         }
     }
 

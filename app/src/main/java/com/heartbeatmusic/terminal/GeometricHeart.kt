@@ -337,7 +337,7 @@ fun GeometricHeartContent(
                             accentColor = accentColor,
                             songId = viewModel.currentSongId.collectAsStateWithLifecycle().value,
                             isInCollection = viewModel.isCurrentSongInCollection.collectAsStateWithLifecycle().value,
-                            onFavoriteClick = { viewModel.addCurrentToCollection() }
+                            onFavoriteClick = { viewModel.toggleCollection() }
                         )
                     } else {
                         CollapsedPanel(onPlayClick = { viewModel.playPause() }, accentColor = accentColor)
