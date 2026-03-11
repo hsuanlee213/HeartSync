@@ -8,6 +8,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.PlayerHolder
+import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.Song
 import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.remote.ArchiveRepository
@@ -18,6 +19,9 @@ import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -108,6 +112,23 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _displayCoverColor = MutableStateFlow<Color?>(null)
     val displayCoverColor: StateFlow<Color?> = _displayCoverColor.asStateFlow()
 
+    private val _currentSongId = MutableStateFlow("")
+    val currentSongId: StateFlow<String> = _currentSongId.asStateFlow()
+
+    private val _collection = MutableStateFlow<List<CollectionItem>>(emptyList())
+    val collection: StateFlow<List<CollectionItem>> = _collection.asStateFlow()
+
+    val isCurrentSongInCollection: StateFlow<Boolean> = combine(
+        _currentSongId,
+        _collection
+    ) { songId, items ->
+        songId.isNotEmpty() && items.any { it.songId == songId }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
     private val player = PlayerHolder.getInstance(application).getPlayer()
     private val libraryRepository = LibraryRepository()
     private val archiveRepository = ArchiveRepository()
@@ -121,6 +142,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         collectHeartRate()
         startMonitoring()
         observePlaybackState()
+        archiveRepository.collectionFlow()
+            .onEach { _collection.value = it }
+            .launchIn(viewModelScope)
     }
 
     private fun observePlaybackState() {
@@ -153,6 +177,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     _currentTrackArtist.value = md?.artist?.toString() ?: ""
                     _currentCoverUrl.value = md?.artworkUri?.toString()
                     _isPanelExpanded.value = mediaItem != null
+                    _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
                     if (mediaItem != null) {
                         _displayTitle.value = md?.title?.toString() ?: ""
                         _displayArtist.value = md?.artist?.toString() ?: ""
@@ -175,6 +200,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentTrackArtist.value = md?.artist?.toString() ?: ""
             _currentCoverUrl.value = md?.artworkUri?.toString()
             _isPanelExpanded.value = mediaItem != null
+            _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
             if (player.isPlaying) startProgressUpdates()
         }
     }
@@ -206,6 +232,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentTrackArtist.value = md?.artist?.toString() ?: ""
             _currentCoverUrl.value = md?.artworkUri?.toString()
             _isPanelExpanded.value = mediaItem != null
+            _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
             if (mediaItem != null) {
                 _displayTitle.value = md?.title?.toString() ?: ""
                 _displayArtist.value = md?.artist?.toString() ?: ""
@@ -287,6 +314,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                             player.prepare()
                             player.play()
                             _isPanelExpanded.value = true
+                            _currentSongId.value = songId
                             _displayTitle.value = title
                             _displayArtist.value = artist
                             _displayFirstTag.value = ""
@@ -320,6 +348,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _displayArtist.value = ""
             _displayFirstTag.value = ""
             _displayCoverColor.value = null
+            _currentSongId.value = ""
             _playbackProgress.value = 0f
             stopProgressUpdates()
 
@@ -385,6 +414,20 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         _currentMode.value = mode
         if (heartRateProvider is MockHeartRateProvider) {
             heartRateProvider.setMode(mode)
+        }
+    }
+
+    /** Add current track to Collection. Uses current songId, track title/artist, coverUrl, and TerminalMode. */
+    fun addCurrentToCollection() {
+        viewModelScope.launch(Dispatchers.IO) {
+            val songId = _currentSongId.value
+            if (songId.isEmpty()) return@launch
+            val title = _currentTrackTitle.value.ifEmpty { _displayTitle.value }.ifEmpty { "Unknown" }
+            val artist = _currentTrackArtist.value.ifEmpty { _displayArtist.value }
+            val coverUrl = _currentCoverUrl.value ?: ""
+            val mode = TerminalModeHolder.getCurrentMode().name
+            archiveRepository.addToCollection(songId, title, artist, mode, coverUrl)
+                .onFailure { Log.e(TAG, "Failed to add to collection", it) }
         }
     }
 

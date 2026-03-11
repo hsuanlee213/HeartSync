@@ -63,9 +63,15 @@ class ArchiveViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun addToCollection(songId: String, title: String, artist: String, mode: String) {
+    fun addToCollection(songId: String, title: String, artist: String, mode: String, coverUrl: String = "") {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.addToCollection(songId, title, artist, mode)
+            repository.addToCollection(songId, title, artist, mode, coverUrl)
+        }
+    }
+
+    fun removeFromCollection(songId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.removeFromCollection(songId)
         }
     }
 }

@@ -2,6 +2,7 @@ package com.heartbeatmusic.terminal
 
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.border
@@ -29,6 +30,7 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Snackbar
@@ -55,7 +57,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
@@ -64,10 +68,13 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.heartbeatmusic.R
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.SyncSession
 import java.text.SimpleDateFormat
@@ -142,7 +149,7 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
                     viewModel = viewModel,
                     snackbarHostState = snackbarHostState
                 )
-                1 -> CollectionContent(items = collection)
+                1 -> CollectionContent(items = collection, viewModel = viewModel)
             }
         }
         SnackbarHost(
@@ -524,64 +531,173 @@ private fun SessionSongItem(
 }
 
 @Composable
-private fun CollectionContent(items: List<CollectionItem>) {
+private fun CollectionContent(items: List<CollectionItem>, viewModel: ArchiveViewModel) {
+    val density = LocalDensity.current
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         items(items, key = { it.id }) { item ->
-            CollectionCard(item = item)
+            CollectionListItemWithReveal(
+                item = item,
+                onTrashClick = { viewModel.removeFromCollection(item.songId) },
+                density = density
+            )
         }
     }
 }
 
 @Composable
-private fun CollectionCard(item: CollectionItem) {
+private fun CollectionListItemWithReveal(
+    item: CollectionItem,
+    onTrashClick: () -> Unit,
+    density: androidx.compose.ui.unit.Density
+) {
+    val offsetPx = remember { Animatable(0f) }
+    val scope = rememberCoroutineScope()
+    val maxOffsetPx = with(density) { TrashRevealWidth.toPx() }
+    val thresholdPx = with(density) { SnapThreshold.toPx() }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(CardBg)
-            .border(1.dp, CyanBorder, RoundedCornerShape(12.dp))
-            .padding(16.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // Background layer: trash button fixed on the right, hidden until card slides away
+        Box(
+            modifier = Modifier
+                .align(Alignment.CenterEnd)
+                .width(TrashRevealWidth)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
+                .background(SwipeDeleteBg)
+                .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
+                .clickable(onClick = onTrashClick),
+            contentAlignment = Alignment.Center
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.title.ifEmpty { "Unknown" },
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White
+            Icon(
+                imageVector = Icons.Default.Delete,
+                contentDescription = "Remove from collection",
+                tint = Color.White
+            )
+        }
+
+        // Foreground layer: glassmorphism card, slides left on swipe to reveal trash
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(offsetPx.value.toInt(), 0) }
+                .clickable(
+                    enabled = offsetPx.value != 0f,
+                    onClick = {
+                        scope.launch {
+                            offsetPx.animateTo(
+                                targetValue = 0f,
+                                animationSpec = spring(
+                                    dampingRatio = Spring.DampingRatioMediumBouncy,
+                                    stiffness = Spring.StiffnessLow
+                                )
+                            )
+                        }
+                    }
                 )
-                Text(
-                    text = item.artist.ifEmpty { "Unknown" },
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 12.sp,
-                    color = UnselectedGray
+                .pointerInput(Unit) {
+                    detectHorizontalDragGestures(
+                        onDragEnd = {
+                            scope.launch {
+                                val current = offsetPx.value
+                                val target = if (current < -thresholdPx) -maxOffsetPx else 0f
+                                offsetPx.animateTo(
+                                    targetValue = target,
+                                    animationSpec = spring(
+                                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                                        stiffness = Spring.StiffnessLow
+                                    )
+                                )
+                            }
+                        },
+                        onHorizontalDrag = { _, dragAmount ->
+                            scope.launch {
+                                val newOffset = (offsetPx.value + dragAmount)
+                                    .coerceIn(-maxOffsetPx, 0f)
+                                offsetPx.snapTo(newOffset)
+                            }
+                        }
+                    )
+                }
+        ) {
+            CollectionCard(item = item, onClick = { /* TODO: play or show detail */ })
+        }
+    }
+}
+
+@Composable
+private fun CollectionCard(
+    item: CollectionItem,
+    onClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CardBg)
+            .border(0.5.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+            .padding(16.dp)
+            .clickable(
+                indication = null,
+                interactionSource = remember { MutableInteractionSource() },
+                onClick = onClick
+            ),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(Color.White.copy(alpha = 0.15f))
+        ) {
+            if (item.coverUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = item.coverUrl,
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Image(
+                    painter = painterResource(R.drawable.ic_music_note),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                    colorFilter = ColorFilter.tint(Color.White.copy(alpha = 0.6f))
                 )
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(CyanBorder.copy(alpha = 0.2f))
-                    .border(1.dp, CyanBorder, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Text(
-                    text = item.mode.uppercase(),
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CyanText
-                )
-            }
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Text(
+                text = item.title.ifEmpty { "Unknown" },
+                fontFamily = FontFamily.Monospace,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White
+            )
+            Text(
+                text = buildString {
+                    append(item.artist.ifEmpty { "Unknown" })
+                    append(" | ")
+                    append(item.mode.uppercase())
+                },
+                fontFamily = FontFamily.Monospace,
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.7f)
+            )
         }
     }
 }

@@ -85,7 +85,8 @@ class ArchiveRepository {
                         songId = (data["songId"] as? String) ?: "",
                         title = (data["title"] as? String) ?: "",
                         artist = (data["artist"] as? String) ?: "",
-                        mode = (data["mode"] as? String) ?: "SYNC"
+                        mode = (data["mode"] as? String) ?: "SYNC",
+                        coverUrl = (data["coverUrl"] as? String) ?: ""
                     )
                 } ?: emptyList()
                 trySend(list)
@@ -93,7 +94,7 @@ class ArchiveRepository {
         awaitClose { listener.remove() }
     }
 
-    suspend fun addToCollection(songId: String, title: String, artist: String, mode: String): Result<Unit> = runCatching {
+    suspend fun addToCollection(songId: String, title: String, artist: String, mode: String, coverUrl: String = ""): Result<Unit> = runCatching {
         val uid = currentUserId() ?: throw IllegalStateException("Not logged in")
         db.collection(FirestoreCollections.USERS)
             .document(uid)
@@ -104,7 +105,8 @@ class ArchiveRepository {
                     "songId" to songId,
                     "title" to title,
                     "artist" to artist,
-                    "mode" to mode
+                    "mode" to mode,
+                    "coverUrl" to coverUrl
                 )
             )
             .await()

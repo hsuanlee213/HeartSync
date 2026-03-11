@@ -41,7 +41,9 @@ import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -51,6 +53,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -72,6 +75,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.heartbeatmusic.R
 import com.heartbeatmusic.heartsync.HeartSyncViewModel
+import kotlinx.coroutines.launch
 import kotlin.math.sin
 
 private val StopRed = Color(0xFFEF4444)
@@ -330,7 +334,10 @@ fun GeometricHeartContent(
                             onNext = { viewModel.next() },
                             onStop = { viewModel.stop() },
                             isPlaying = isMusicPlaying,
-                            accentColor = accentColor
+                            accentColor = accentColor,
+                            songId = viewModel.currentSongId.collectAsStateWithLifecycle().value,
+                            isInCollection = viewModel.isCurrentSongInCollection.collectAsStateWithLifecycle().value,
+                            onFavoriteClick = { viewModel.addCurrentToCollection() }
                         )
                     } else {
                         CollapsedPanel(onPlayClick = { viewModel.playPause() }, accentColor = accentColor)
@@ -363,6 +370,8 @@ private fun CollapsedPanel(onPlayClick: () -> Unit, accentColor: Color) {
     }
 }
 
+private val FavoriteCyan = Color.Cyan
+
 @Composable
 private fun ExpandedPanel(
     trackTitle: String,
@@ -377,7 +386,10 @@ private fun ExpandedPanel(
     onNext: () -> Unit,
     onStop: () -> Unit,
     isPlaying: Boolean,
-    accentColor: Color
+    accentColor: Color,
+    songId: String = "",
+    isInCollection: Boolean = false,
+    onFavoriteClick: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -474,6 +486,32 @@ private fun ExpandedPanel(
                             )
                         }
                     }
+                }
+            }
+
+            // Favorite button: only show when we have a real track
+            if (songId.isNotEmpty()) {
+                val scale = remember { Animatable(1f) }
+                val scope = rememberCoroutineScope()
+                IconButton(
+                    onClick = {
+                        onFavoriteClick()
+                        scope.launch {
+                            scale.animateTo(1.2f, animationSpec = tween(80))
+                            scale.animateTo(1f, animationSpec = tween(80))
+                        }
+                    },
+                    modifier = Modifier
+                        .graphicsLayer {
+                            scaleX = scale.value
+                            scaleY = scale.value
+                        }
+                ) {
+                    Icon(
+                        imageVector = if (isInCollection) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                        contentDescription = if (isInCollection) "Remove from collection" else "Add to collection",
+                        tint = FavoriteCyan
+                    )
                 }
             }
         }

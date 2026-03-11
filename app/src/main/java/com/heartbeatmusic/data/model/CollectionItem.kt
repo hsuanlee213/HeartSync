@@ -8,5 +8,6 @@ data class CollectionItem(
     val songId: String,
     val title: String,
     val artist: String,
-    val mode: String // ZEN, SYNC, OVERDRIVE
+    val mode: String, // ZEN, SYNC, OVERDRIVE
+    val coverUrl: String = ""
 )
