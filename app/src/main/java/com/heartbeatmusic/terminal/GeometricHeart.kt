@@ -102,6 +102,7 @@ fun GeometricHeartContent(
 ) {
     val currentBpm by viewModel.currentHeartRate.collectAsStateWithLifecycle()
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsStateWithLifecycle()
+    val isPlayingInCurrentMode by viewModel.isPlayingInCurrentMode.collectAsStateWithLifecycle()
     val isPanelExpanded by viewModel.isPanelExpanded.collectAsStateWithLifecycle()
     val mode by TerminalModeHolder.selectedMode.collectAsStateWithLifecycle()
     val currentCoverUrl by viewModel.currentCoverUrl.collectAsStateWithLifecycle()
@@ -333,7 +334,7 @@ fun GeometricHeartContent(
                             onPlayPause = { viewModel.playPause() },
                             onNext = { viewModel.next() },
                             onStop = { viewModel.stop() },
-                            isPlaying = isMusicPlaying,
+                            isPlaying = isPlayingInCurrentMode,
                             accentColor = accentColor,
                             songId = viewModel.currentSongId.collectAsStateWithLifecycle().value,
                             isInCollection = viewModel.isCurrentSongInCollection.collectAsStateWithLifecycle().value,

@@ -85,6 +85,23 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _isMusicPlaying = MutableStateFlow(false)
     val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
 
+    /** Mode that owns the current playback. Null when nothing playing. */
+    private val _playingMode = MutableStateFlow<TerminalMode?>(null)
+    val playingMode: StateFlow<TerminalMode?> = _playingMode.asStateFlow()
+
+    /** True only when current mode is the one playing. Other modes show Play. */
+    val isPlayingInCurrentMode: StateFlow<Boolean> = combine(
+        _isMusicPlaying,
+        _playingMode,
+        TerminalModeHolder.selectedMode
+    ) { playing, pm, current ->
+        playing && pm == current
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = false
+    )
+
     /** True when we have an active track (panel expanded). Stays true during seek/pause. */
     private val _isPanelExpanded = MutableStateFlow(false)
     val isPanelExpanded: StateFlow<Boolean> = _isPanelExpanded.asStateFlow()
@@ -146,6 +163,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         collectHeartRate()
         startMonitoring()
         observePlaybackState()
+        initPlaybackState()
         archiveRepository.collectionFlow()
             .onEach { _collection.value = it }
             .launchIn(viewModelScope)
@@ -182,7 +200,10 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     _currentCoverUrl.value = md?.artworkUri?.toString()
                     _isPanelExpanded.value = mediaItem != null
                     _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
-                    if (mediaItem != null) {
+                    if (mediaItem == null) {
+                        _playingMode.value = null
+                    } else {
+                        inferPlayingModeFromMediaId(mediaItem.mediaId)
                         _displayTitle.value = md?.title?.toString() ?: ""
                         _displayArtist.value = md?.artist?.toString() ?: ""
                         _displayFirstTag.value = ""
@@ -196,6 +217,22 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
         })
+    }
+
+    private fun inferPlayingModeFromMediaId(mediaId: String?) {
+        if (mediaId?.startsWith("essential_") == true) {
+            val modeName = mediaId.removePrefix("essential_")
+            _playingMode.value = when (modeName) {
+                "ZEN" -> TerminalMode.ZEN
+                "SYNC" -> TerminalMode.SYNC
+                "OVERDRIVE" -> TerminalMode.OVERDRIVE
+                else -> null
+            }
+        }
+        // API songs: _playingMode set explicitly in playFromApi when we start playback
+    }
+
+    private fun initPlaybackState() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
             _isMusicPlaying.value = player.isPlaying
             val mediaItem = player.currentMediaItem
@@ -205,6 +242,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _currentCoverUrl.value = md?.artworkUri?.toString()
             _isPanelExpanded.value = mediaItem != null
             _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
+            if (mediaItem != null) inferPlayingModeFromMediaId(mediaItem.mediaId)
             if (player.isPlaying) startProgressUpdates()
         }
     }
@@ -238,10 +276,13 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             _isPanelExpanded.value = mediaItem != null
             _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
             if (mediaItem != null) {
+                inferPlayingModeFromMediaId(mediaItem.mediaId)
                 _displayTitle.value = md?.title?.toString() ?: ""
                 _displayArtist.value = md?.artist?.toString() ?: ""
                 _displayFirstTag.value = ""
                 _displayCoverColor.value = null
+            } else {
+                _playingMode.value = null
             }
             if (player.isPlaying) startProgressUpdates()
         }
@@ -271,24 +312,45 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         heartRateProvider.stopMonitoring()
     }
 
-    /** Play or pause playback. Loads first song if no media. */
+    /** Play or pause. Option A: switching mode keeps playing until user presses Play in new mode. */
     fun playPause() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            if (player.isPlaying) {
+            val currentMode = TerminalModeHolder.getCurrentMode()
+            val playingModeNow = _playingMode.value
+            val isThisModePlaying = player.isPlaying && playingModeNow == currentMode
+
+            if (isThisModePlaying) {
+                Log.d(TAG, "HeartSync_Audio: Pausing mode=$currentMode")
                 player.pause()
             } else {
                 if (player.currentMediaItem == null) {
                     loadAndPlayFirstSong()
                 } else {
-                    player.play()
+                    Log.d(TAG, "HeartSync_Audio: Switching from $playingModeNow to $currentMode, stopping previous tracks...")
+                    stopCurrentPlayback()
+                    loadAndPlayFirstSong()
                 }
             }
         }
     }
 
+    private fun stopCurrentPlayback() {
+        player.stop()
+        player.clearMediaItems()
+        stopProgressUpdates()
+        _isMusicPlaying.value = false
+        _playingMode.value = null
+    }
+
     private fun loadAndPlayFirstSong() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            setTerminalMode(TerminalModeHolder.getCurrentMode())
+            val mode = TerminalModeHolder.getCurrentMode()
+            Log.d(TAG, "HeartSync_Audio: Playing: $mode, stopping previous tracks...")
+            player.stop()
+            player.clearMediaItems()
+            stopProgressUpdates()
+
+            setTerminalMode(mode)
             _isPanelExpanded.value = true
             libraryRepository.getAllSongs(
                 object : LibraryRepository.SongsCallback {
@@ -316,6 +378,10 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     private fun playFromApi(song: Song, url: String) {
+        val mode = TerminalModeHolder.getCurrentMode()
+        _playingMode.value = mode
+        Log.d(TAG, "HeartSync_Audio: Playing from API mode=$mode")
+
         val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
         val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
         val coverUrl = song.coverUrl
@@ -345,6 +411,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     /** Fallback to bundled essentials when API fails or no network. */
     private fun playFromEssentials() {
         val mode = TerminalModeHolder.getCurrentMode()
+        _playingMode.value = mode
+        Log.d(TAG, "HeartSync_Audio: Playing from essentials mode=$mode")
+
         val (resId, title, artist) = when (mode) {
             TerminalMode.ZEN -> Triple(R.raw.essential_zen, "Eternal Peace (Offline)", "Calm Master")
             TerminalMode.SYNC -> Triple(R.raw.essential_sync, "Digital Pulse (Offline)", "Sync Theory")
@@ -383,8 +452,10 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             sessionMode = null
             sessionSongs.clear()
 
+            Log.d(TAG, "HeartSync_Audio: Stopping playback, clearing tracks...")
             player.stop()
             player.clearMediaItems()
+            _playingMode.value = null
             _isMusicPlaying.value = false
             _isPanelExpanded.value = false
             _currentTrackTitle.value = ""
