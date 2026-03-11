@@ -28,7 +28,7 @@ public class UserProfileActivity extends AppCompatActivity {
     private static final String TAG = "UserProfileActivity";
     private TextInputEditText etUsername;
     private TextInputEditText etEmail;
-    private Button btnChangePassword;
+    private Button btnSecuritySetting;
     private Button btnLogout;
     private SharedPreferences prefs;
     private FirebaseAuth auth;
@@ -55,12 +55,12 @@ public class UserProfileActivity extends AppCompatActivity {
         // Bind views
         etUsername = findViewById(R.id.et_username);
         etEmail = findViewById(R.id.et_email);
-        btnChangePassword = findViewById(R.id.btn_change_password);
+        btnSecuritySetting = findViewById(R.id.btn_security_setting);
         btnLogout = findViewById(R.id.btn_logout);
 
         loadUserProfileData();
 
-        btnChangePassword.setOnClickListener(v -> showChangePasswordDialog());
+        btnSecuritySetting.setOnClickListener(v -> showChangePasswordDialog());
         btnLogout.setOnClickListener(v -> performLogout());
     }
 
@@ -83,12 +83,12 @@ public class UserProfileActivity extends AppCompatActivity {
         }
 
         if (user == null || user.getEmail() == null || authenticatedEmail.equals("N/A")) {
-            btnChangePassword.setEnabled(false);
-            btnChangePassword.setAlpha(0.5f);
+            btnSecuritySetting.setEnabled(false);
+            btnSecuritySetting.setAlpha(0.5f);
             Toast.makeText(this, "You must be logged in with an email account to change your password.", Toast.LENGTH_LONG).show();
         } else {
-            btnChangePassword.setEnabled(true);
-            btnChangePassword.setAlpha(1.0f);
+            btnSecuritySetting.setEnabled(true);
+            btnSecuritySetting.setAlpha(1.0f);
         }
     }
 

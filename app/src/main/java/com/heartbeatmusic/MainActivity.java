@@ -22,7 +22,7 @@ import com.heartbeatmusic.biometric.BioProfile;
 import com.heartbeatmusic.biometric.BioProfileStorage;
 import com.heartbeatmusic.biometric.BiometricFilter;
 import com.heartbeatmusic.terminal.ArchiveFragment;
-import com.heartbeatmusic.terminal.SettingsFragment;
+import com.heartbeatmusic.terminal.SyncEngineFragment;
 import com.heartbeatmusic.terminal.TerminalFragment;
 import com.heartbeatmusic.terminal.TerminalMode;
 import com.heartbeatmusic.terminal.TerminalModeHolder;
@@ -31,7 +31,7 @@ public class MainActivity extends AppCompatActivity {
 
     private static final String TAG_TERMINAL = "terminal";
     private static final String TAG_ARCHIVE = "archive";
-    private static final String TAG_SETTINGS = "settings";
+    private static final String TAG_SYNC_ENGINE = "sync_engine";
 
     private SharedPreferences prefs;
     private TextView tvUsername;
@@ -139,8 +139,8 @@ public class MainActivity extends AppCompatActivity {
             } else if (id == R.id.nav_archive) {
                 showFragment(TAG_ARCHIVE);
                 return true;
-            } else if (id == R.id.nav_settings) {
-                showFragment(TAG_SETTINGS);
+            } else if (id == R.id.nav_sync_engine) {
+                showFragment(TAG_SYNC_ENGINE);
                 return true;
             }
             return false;
@@ -191,8 +191,8 @@ public class MainActivity extends AppCompatActivity {
                 return new TerminalFragment();
             case TAG_ARCHIVE:
                 return new ArchiveFragment();
-            case TAG_SETTINGS:
-                return new SettingsFragment();
+            case TAG_SYNC_ENGINE:
+                return new SyncEngineFragment();
             default:
                 return new TerminalFragment();
         }

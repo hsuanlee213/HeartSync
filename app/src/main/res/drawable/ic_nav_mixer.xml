@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Mixer/sliders icon -->
+    <path
+        android:fillColor="#FF000000"
+        android:pathData="M4,2v20h2V2H4zM10,6v14h2V6h-2zM16,10v10h2V10h-2zM22,14v6h2v-6h-2z" />
+</vector>

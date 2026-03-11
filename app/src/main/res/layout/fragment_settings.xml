@@ -1,17 +1,151 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/deep_purple"
-    tools:context=".terminal.SettingsFragment">
+    android:background="@color/tech_bg_dark"
+    tools:context=".terminal.SyncEngineFragment">
+
+    <View
+        android:id="@+id/grid_overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
 
     <TextView
+        android:id="@+id/tv_hex_corner_tl"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="Settings"
-        android:textColor="@color/white"
-        android:textSize="18sp" />
+        android:layout_gravity="start|top"
+        android:layout_margin="16dp"
+        android:fontFamily="monospace"
+        android:textColor="@color/tech_cyan"
+        android:textSize="10sp"
+        android:alpha="0.4"
+        tools:text="0x7F3A" />
 
+    <TextView
+        android:id="@+id/tv_hex_corner_tr"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|top"
+        android:layout_margin="16dp"
+        android:fontFamily="monospace"
+        android:textColor="@color/tech_cyan"
+        android:textSize="10sp"
+        android:alpha="0.4"
+        tools:text="0xB2C1" />
+
+    <TextView
+        android:id="@+id/tv_hex_corner_bl"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="start|bottom"
+        android:layout_margin="16dp"
+        android:fontFamily="monospace"
+        android:textColor="@color/tech_cyan"
+        android:textSize="10sp"
+        android:alpha="0.4"
+        tools:text="0xE9F0" />
+
+    <TextView
+        android:id="@+id/tv_hex_corner_br"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end|bottom"
+        android:layout_margin="16dp"
+        android:fontFamily="monospace"
+        android:textColor="@color/tech_cyan"
+        android:textSize="10sp"
+        android:alpha="0.4"
+        tools:text="0x4D5A" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="24dp"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center_horizontal">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="[ SYNC ENGINE v1.0 ]"
+                android:textColor="@color/tech_cyan"
+                android:fontFamily="monospace"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:layout_marginBottom="8dp" />
+
+            <View
+                android:layout_width="120dp"
+                android:layout_height="2dp"
+                android:layout_marginBottom="32dp"
+                android:background="@color/tech_cyan" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="RESPONSE SENSITIVITY"
+                android:textColor="@color/tech_label_gray"
+                android:fontFamily="monospace"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_response"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="50"
+                app:thumbColor="@color/tech_cyan"
+                app:trackColorActive="@color/tech_cyan"
+                app:trackColorInactive="@color/tech_stroke_default" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="SYNC TOLERANCE"
+                android:textColor="@color/tech_label_gray"
+                android:fontFamily="monospace"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_tolerance"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="24dp"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="50"
+                app:thumbColor="@color/tech_cyan"
+                app:trackColorActive="@color/tech_cyan"
+                app:trackColorInactive="@color/tech_stroke_default" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="CROSSFADE SPEED"
+                android:textColor="@color/tech_label_gray"
+                android:fontFamily="monospace"
+                android:textSize="12sp"
+                android:layout_marginBottom="4dp" />
+            <com.google.android.material.slider.Slider
+                android:id="@+id/slider_crossfade"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:valueFrom="0"
+                android:valueTo="100"
+                android:value="50"
+                app:thumbColor="@color/tech_cyan"
+                app:trackColorActive="@color/tech_cyan"
+                app:trackColorInactive="@color/tech_stroke_default" />
+        </LinearLayout>
+    </ScrollView>
 </FrameLayout>

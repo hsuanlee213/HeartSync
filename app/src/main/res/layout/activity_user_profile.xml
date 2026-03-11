@@ -123,17 +123,17 @@
                 android:textColor="@color/tech_label_gray"
                 android:textSize="13sp" />
 
-            <!-- Change Password Button (primary - cyan gradient + glow) -->
+            <!-- SECURITY_SETTING: outline, opens Change Password dialog -->
             <Button
-                android:id="@+id/btn_change_password"
+                android:id="@+id/btn_security_setting"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginBottom="24dp"
-                android:background="@drawable/bg_btn_change_password"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/bg_btn_outline_cyan"
                 android:minHeight="0dp"
                 android:paddingVertical="14dp"
-                android:text="Change Password"
-                android:textColor="@android:color/black"
+                android:text="SECURITY_SETTING"
+                android:textColor="@color/tech_cyan"
                 android:textStyle="bold" />
 
             <!-- Logout Button -->
