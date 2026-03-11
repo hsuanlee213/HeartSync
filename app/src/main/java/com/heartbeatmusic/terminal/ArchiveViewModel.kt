@@ -69,9 +69,9 @@ class ArchiveViewModel(application: Application) : AndroidViewModel(application)
         }
     }
 
-    fun removeFromCollection(songId: String) {
+    fun removeFromCollection(songId: String, mode: String) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.removeFromCollection(songId)
+            repository.removeFromCollection(songId, mode)
         }
     }
 }

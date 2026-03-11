@@ -119,11 +119,13 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val _collection = MutableStateFlow<List<CollectionItem>>(emptyList())
     val collection: StateFlow<List<CollectionItem>> = _collection.asStateFlow()
 
+    /** Heart filled only when current song + current mode exist in collection. */
     val isCurrentSongInCollection: StateFlow<Boolean> = combine(
         _currentSongId,
-        _collection
-    ) { songId, items ->
-        songId.isNotEmpty() && items.any { it.songId == songId }
+        _collection,
+        TerminalModeHolder.selectedMode
+    ) { songId, items, mode ->
+        songId.isNotEmpty() && items.any { it.songId == songId && it.mode == mode.name }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -420,19 +422,26 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
 
     /** Toggle current track in Collection: add if not in, remove if in. Syncs with Archive tab. */
     fun toggleCollection() {
+        // Capture mode on Main thread at click time (not hardcoded) - ensures ZEN/SYNC/OVERDRIVE all work
+        val currentMode = TerminalModeHolder.getCurrentMode().name.ifEmpty { "SYNC" }
+        Log.d(TAG, "HeartSync_Debug: toggleCollection mode=$currentMode songId=${_currentSongId.value}")
+
         viewModelScope.launch(Dispatchers.IO) {
             val songId = _currentSongId.value
-            if (songId.isEmpty()) return@launch
-            val inCollection = _collection.value.any { it.songId == songId }
+            if (songId.isEmpty()) {
+                Log.w(TAG, "HeartSync_Debug: songId empty, aborting")
+                return@launch
+            }
+            val inCollection = _collection.value.any { it.songId == songId && it.mode == currentMode }
             val title = _currentTrackTitle.value.ifEmpty { _displayTitle.value }.ifEmpty { "Unknown" }
             val artist = _currentTrackArtist.value.ifEmpty { _displayArtist.value }
             val coverUrl = _currentCoverUrl.value ?: ""
-            val mode = TerminalModeHolder.getCurrentMode().name
+            val mode = currentMode
 
             if (inCollection) {
-                val removed = _collection.value.find { it.songId == songId }
-                _collection.value = _collection.value.filter { it.songId != songId }
-                archiveRepository.removeFromCollection(songId)
+                val removed = _collection.value.find { it.songId == songId && it.mode == mode }
+                _collection.value = _collection.value.filter { !(it.songId == songId && it.mode == mode) }
+                archiveRepository.removeFromCollection(songId, mode)
                     .onFailure {
                         Log.e(TAG, "Failed to remove from collection", it)
                         withContext(Dispatchers.Main.immediate) {
@@ -441,8 +450,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                         removed?.let { _collection.value = _collection.value + it }
                     }
             } else {
+                val docId = "${songId}_${mode}"
                 val newItem = CollectionItem(
-                    id = songId,
+                    id = docId,
                     songId = songId,
                     title = title,
                     artist = artist,
@@ -450,13 +460,15 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                     coverUrl = coverUrl
                 )
                 _collection.value = _collection.value + newItem
+                Log.d(TAG, "HeartSync_Debug: Saving song with mode: $mode (songId=$songId title=$title)")
                 archiveRepository.addToCollection(songId, title, artist, mode, coverUrl)
+                    .onSuccess { Log.d(TAG, "HeartSync_Debug: Added to collection successfully") }
                     .onFailure {
                         Log.e(TAG, "Failed to add to collection", it)
                         withContext(Dispatchers.Main.immediate) {
                             Toast.makeText(getApplication(), "無法加入收藏（請確認已登入）", Toast.LENGTH_SHORT).show()
                         }
-                        _collection.value = _collection.value.filter { it.songId != songId }
+                        _collection.value = _collection.value.filter { !(it.songId == songId && it.mode == mode) }
                     }
             }
         }

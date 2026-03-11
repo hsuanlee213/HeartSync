@@ -548,7 +548,7 @@ private fun CollectionContent(items: List<CollectionItem>, viewModel: ArchiveVie
         items(items, key = { it.id }) { item ->
             CollectionListItemWithReveal(
                 item = item,
-                onTrashClick = { viewModel.removeFromCollection(item.songId) },
+                onTrashClick = { viewModel.removeFromCollection(item.songId, item.mode) },
                 density = density
             )
         }

@@ -94,12 +94,16 @@ class ArchiveRepository {
         awaitClose { listener.remove() }
     }
 
+    /** Composite document ID: songId_mode. Allows same song in ZEN/SYNC/OVERDRIVE separately. */
+    private fun collectionDocId(songId: String, mode: String) = "${songId}_${mode}"
+
     suspend fun addToCollection(songId: String, title: String, artist: String, mode: String, coverUrl: String = ""): Result<Unit> = runCatching {
         val uid = currentUserId() ?: throw IllegalStateException("Not logged in")
+        val docId = collectionDocId(songId, mode)
         db.collection(FirestoreCollections.USERS)
             .document(uid)
             .collection(FirestoreCollections.COLLECTION)
-            .document(songId)
+            .document(docId)
             .set(
                 mapOf(
                     "songId" to songId,
@@ -119,12 +123,14 @@ class ArchiveRepository {
             .await()
     }
 
-    suspend fun removeFromCollection(songId: String): Result<Unit> = runCatching {
+    /** Delete only the entry for songId + mode. WHERE songId = :id AND mode = :mode. */
+    suspend fun removeFromCollection(songId: String, mode: String): Result<Unit> = runCatching {
         val uid = currentUserId() ?: throw IllegalStateException("Not logged in")
         val docs = db.collection(FirestoreCollections.USERS)
             .document(uid)
             .collection(FirestoreCollections.COLLECTION)
             .whereEqualTo("songId", songId)
+            .whereEqualTo("mode", mode)
             .get()
             .await()
         docs.documents.forEach { it.reference.delete().await() }
