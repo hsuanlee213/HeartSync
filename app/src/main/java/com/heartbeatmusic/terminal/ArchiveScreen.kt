@@ -25,13 +25,22 @@ import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Sync
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarData
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,6 +59,8 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.SyncSession
@@ -75,9 +86,40 @@ private fun modeIcon(mode: String): ImageVector = when (mode.uppercase()) {
 }
 
 @Composable
+private fun ArchiveSnackbar(snackbarData: SnackbarData) {
+    Snackbar(
+        action = {
+            snackbarData.visuals.actionLabel?.let { label ->
+                TextButton(
+                    onClick = { snackbarData.performAction() },
+                    colors = ButtonDefaults.textButtonColors(contentColor = CyanText)
+                ) {
+                    Text(
+                        text = label,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        },
+        containerColor = Color(0xFF1A1A1A),
+        contentColor = Color.White,
+        actionContentColor = CyanText,
+        content = {
+            Text(
+                text = snackbarData.visuals.message,
+                color = Color.White
+            )
+        }
+    )
+}
+
+@Composable
 fun ArchiveScreen(viewModel: ArchiveViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
+    val snackbarHostState = remember { SnackbarHostState() }
     val sessions by viewModel.sessions.collectAsStateWithLifecycle(initialValue = emptyList())
+    val restoreTokens by viewModel.restoreTokens.collectAsStateWithLifecycle(initialValue = emptyMap())
     val collection by viewModel.collection.collectAsStateWithLifecycle(initialValue = emptyList())
 
     Box(
@@ -88,9 +130,22 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
         Column(modifier = Modifier.fillMaxSize()) {
             TabRow(selectedTab = selectedTab, onTabSelected = { selectedTab = it })
             when (selectedTab) {
-                0 -> SessionsContent(sessions = sessions, viewModel = viewModel)
+                0 -> SessionsContent(
+                    sessions = sessions,
+                    restoreTokens = restoreTokens,
+                    viewModel = viewModel,
+                    snackbarHostState = snackbarHostState
+                )
                 1 -> CollectionContent(items = collection)
             }
+        }
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp)
+        ) { data ->
+            ArchiveSnackbar(snackbarData = data)
         }
     }
 }
@@ -152,10 +207,35 @@ private fun Tab(
 @Composable
 private fun SessionsContent(
     sessions: List<SyncSession>,
-    viewModel: ArchiveViewModel
+    restoreTokens: Map<String, Int>,
+    viewModel: ArchiveViewModel,
+    snackbarHostState: SnackbarHostState
 ) {
     var expandedSessionId by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
+
+    fun handleSessionDismissed(session: SyncSession) {
+        scope.launch {
+            delay(350)
+            val sessionToRestore = session
+            viewModel.removeSessionFromUI(session.id)
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            val result = snackbarHostState.showSnackbar(
+                message = "Session removed",
+                actionLabel = "UNDO",
+                duration = SnackbarDuration.Long
+            )
+            when (result) {
+                SnackbarResult.ActionPerformed -> {
+                    viewModel.restoreSession(sessionToRestore)
+                }
+                SnackbarResult.Dismissed -> {
+                    viewModel.deleteFromDb(session.id)
+                }
+            }
+        }
+    }
 
     LazyColumn(
         modifier = Modifier
@@ -163,19 +243,18 @@ private fun SessionsContent(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(sessions, key = { it.id }) { session ->
+        items(sessions, key = { "${it.id}_${restoreTokens[it.id] ?: 0}" }) { session ->
             val dismissState = rememberSwipeToDismissBoxState(
                 confirmValueChange = { value ->
-                    if (value == SwipeToDismissBoxValue.EndToStart) {
-                        viewModel.deleteSession(session.id)
-                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                        true
-                    } else {
-                        false
-                    }
+                    value == SwipeToDismissBoxValue.EndToStart
                 },
-                positionalThreshold = { totalWidth -> totalWidth * 0.4f }
+                positionalThreshold = { totalWidth -> totalWidth * 0.5f }
             )
+            LaunchedEffect(dismissState.currentValue) {
+                if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                    handleSessionDismissed(session)
+                }
+            }
             SwipeToDismissBox(
                 state = dismissState,
                 enableDismissFromStartToEnd = false,
@@ -193,8 +272,7 @@ private fun SessionsContent(
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Delete",
-                                tint = Color.White,
-                                modifier = Modifier.padding(end = 24.dp)
+                                tint = Color.White
                             )
                         }
                     } else {
