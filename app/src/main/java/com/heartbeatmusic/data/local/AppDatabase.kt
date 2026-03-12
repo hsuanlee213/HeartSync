@@ -8,14 +8,16 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [
         CollectionItemEntity::class,
-        SyncSessionEntity::class
+        SyncSessionEntity::class,
+        UserProfileEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun collectionDao(): CollectionDao
     abstract fun syncSessionDao(): SyncSessionDao
+    abstract fun userProfileDao(): UserProfileDao
 
     companion object {
         @Volatile
@@ -33,6 +35,7 @@ abstract class AppDatabase : RoomDatabase() {
                 "heartbeat_db"
             )
                 // v1 -> v2: add SyncSession table
+                // v2 -> v3: add UserProfile table (avatar local/remote)
                 .fallbackToDestructiveMigration()
                 .build()
     }

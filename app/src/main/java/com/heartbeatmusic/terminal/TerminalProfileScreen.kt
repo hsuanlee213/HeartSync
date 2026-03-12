@@ -1,5 +1,9 @@
 package com.heartbeatmusic.terminal
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,14 +27,18 @@ import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.annotation.OptIn
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +54,11 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
+import coil.compose.AsyncImage
+import com.heartbeatmusic.profile.UserAvatarViewModel
+import androidx.lifecycle.viewmodel.compose.viewModel
 
 // Profile screen palette: match main screen Deep Purple style
 private val ProfileBackgroundDeepPurple = Color(0xFF1A0033)
@@ -71,9 +84,25 @@ fun TerminalProfileScreen(
     onChangePassword: () -> Unit,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier,
-    navController: NavController? = null
+    navController: NavController? = null,
+    avatarViewModel: UserAvatarViewModel = viewModel()
 ) {
     var showDialog by remember { mutableStateOf(false) }
+    var pendingAvatarUri by remember { mutableStateOf<Uri?>(null) }
+    val avatarState by avatarViewModel.uiState.collectAsState()
+    val context = LocalContext.current
+
+    LaunchedEffect(Unit) {
+        avatarViewModel.events.collect { message ->
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        pendingAvatarUri = uri
+    }
 
     Scaffold(
         modifier = modifier
@@ -135,15 +164,29 @@ fun TerminalProfileScreen(
                             Brush.linearGradient(
                                 colors = listOf(AvatarGradientStart, AvatarGradientEnd)
                             )
-                        ),
+                        )
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = displayLetter,
-                        style = MaterialTheme.typography.headlineLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
+                    val model = avatarState.avatarLocalUri ?: avatarState.avatarRemoteUrl
+                    if (!model.isNullOrEmpty()) {
+                        AsyncImage(
+                            model = model,
+                            contentDescription = "Profile photo",
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Text(
+                            text = displayLetter,
+                            style = MaterialTheme.typography.headlineLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
                 Text(
@@ -229,5 +272,39 @@ fun TerminalProfileScreen(
                 }
             }
         }
+    }
+
+    if (pendingAvatarUri != null) {
+        AlertDialog(
+            onDismissRequest = { pendingAvatarUri = null },
+            title = { Text(text = "Use this photo?") },
+            text = {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AsyncImage(
+                        model = pendingAvatarUri,
+                        contentDescription = "Selected photo",
+                        modifier = Modifier.size(160.dp).clip(CircleShape)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val uri = pendingAvatarUri
+                        pendingAvatarUri = null
+                        if (uri != null) avatarViewModel.confirmAvatar(uri)
+                    }
+                ) { Text("Confirm") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingAvatarUri = null }) { Text("Cancel") }
+            },
+            containerColor = ProfileBackgroundDeepPurple
+        )
     }
 }
