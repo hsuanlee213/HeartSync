@@ -14,6 +14,7 @@ import com.heartbeatmusic.PlayerHolder
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.Song
 import com.heartbeatmusic.data.model.SyncSession
+import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.terminal.TerminalModeHolder
@@ -165,6 +166,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val player = PlayerHolder.getInstance(application).getPlayer()
     private val libraryRepository = LibraryRepository()
     private val archiveRepository = ArchiveRepository()
+    private val collectionRepository = CollectionRepository(application, archiveRepository)
     private var progressJob: Job? = null
 
     private var sessionStartTime: Long? = null
@@ -176,9 +178,12 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         startMonitoring()
         observePlaybackState()
         initPlaybackState()
-        archiveRepository.collectionFlow()
+        collectionRepository.collectionFlow()
             .onEach { _collection.value = it }
             .launchIn(viewModelScope)
+        viewModelScope.launch(Dispatchers.IO) {
+            collectionRepository.syncFromFirestore()
+        }
     }
 
     private fun observePlaybackState() {
@@ -692,31 +697,13 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             val mode = currentMode
 
             if (inCollection) {
-                val removed = _collection.value.find { it.songId == songId && it.mode == mode }
-                _collection.value = _collection.value.filter { !(it.songId == songId && it.mode == mode) }
-                archiveRepository.removeFromCollection(songId, mode)
-                    .onFailure {
-                        Log.e(TAG, "HeartSync_Debug: Failed to remove from collection", it)
-                        removed?.let { _collection.value = _collection.value + it }
-                    }
+                runCatching { collectionRepository.removeFromCollection(songId, mode) }
+                    .onFailure { Log.e(TAG, "HeartSync_Debug: Failed to remove from collection", it) }
             } else {
-                val docId = "${songId}_${mode}"
-                val newItem = CollectionItem(
-                    id = docId,
-                    songId = songId,
-                    title = title,
-                    artist = artist,
-                    mode = mode,
-                    coverUrl = coverUrl
-                )
-                _collection.value = _collection.value + newItem
                 Log.d(TAG, "HeartSync_Debug: Saving song with mode: $mode (songId=$songId title=$title)")
-                archiveRepository.addToCollection(songId, title, artist, mode, coverUrl)
+                runCatching { collectionRepository.addToCollection(songId, title, artist, mode, coverUrl) }
                     .onSuccess { Log.d(TAG, "HeartSync_Debug: Added to collection successfully") }
-                    .onFailure {
-                        Log.e(TAG, "HeartSync_Debug: Failed to add to collection (check login)", it)
-                        _collection.value = _collection.value.filter { !(it.songId == songId && it.mode == mode) }
-                    }
+                    .onFailure { Log.e(TAG, "HeartSync_Debug: Failed to add to collection (check login)", it) }
             }
         }
     }

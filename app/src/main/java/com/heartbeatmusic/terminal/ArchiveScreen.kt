@@ -148,7 +148,6 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
     val sessions by viewModel.sessions.collectAsStateWithLifecycle(initialValue = emptyList())
     val restoreTokens by viewModel.restoreTokens.collectAsStateWithLifecycle(initialValue = emptyMap())
     val collection by viewModel.collection.collectAsStateWithLifecycle(initialValue = emptyList())
-    val collectionRestoreTokens by viewModel.collectionRestoreTokens.collectAsStateWithLifecycle(initialValue = emptyMap())
 
     Box(
         modifier = Modifier
@@ -174,7 +173,6 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
                     )
                     else -> CollectionContent(
                         items = collection,
-                        collectionRestoreTokens = collectionRestoreTokens,
                         viewModel = viewModel,
                         snackbarHostState = snackbarHostState
                     )
@@ -562,7 +560,6 @@ private fun SessionSongItem(
 @Composable
 private fun CollectionContent(
     items: List<CollectionItem>,
-    collectionRestoreTokens: Map<String, Int>,
     viewModel: ArchiveViewModel,
     snackbarHostState: SnackbarHostState
 ) {
@@ -577,8 +574,8 @@ private fun CollectionContent(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             delay(350)
             val itemToRestore = item
-            viewModel.removeCollectionFromUI(item)
             deletingCollectionIds = deletingCollectionIds - item.id
+            viewModel.removeFromCollection(item.songId, item.mode)
             val result = snackbarHostState.showSnackbar(
                 message = "Song removed from collection",
                 actionLabel = "UNDO",
@@ -586,11 +583,15 @@ private fun CollectionContent(
             )
             when (result) {
                 SnackbarResult.ActionPerformed -> {
-                    viewModel.restoreCollectionItem(itemToRestore)
+                    viewModel.addToCollection(
+                        itemToRestore.songId,
+                        itemToRestore.title,
+                        itemToRestore.artist,
+                        itemToRestore.mode,
+                        itemToRestore.coverUrl
+                    )
                 }
-                SnackbarResult.Dismissed -> {
-                    viewModel.deleteCollectionFromDb(itemToRestore)
-                }
+                SnackbarResult.Dismissed -> { }
             }
         }
     }
@@ -601,7 +602,7 @@ private fun CollectionContent(
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        items(items, key = { "${it.id}_${collectionRestoreTokens[it.id] ?: 0}" }) { item ->
+        items(items, key = { it.id }) { item ->
             CollectionListItemWithReveal(
                 item = item,
                 isDeleting = item.id in deletingCollectionIds,

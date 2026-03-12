@@ -97,6 +97,27 @@ class ArchiveRepository {
     /** Composite document ID: songId_mode. Allows same song in ZEN/SYNC/OVERDRIVE separately. */
     private fun collectionDocId(songId: String, mode: String) = "${songId}_${mode}"
 
+    /** Fetch collection once (for initial sync from Firestore into local DB). */
+    suspend fun getCollectionOnce(): List<CollectionItem> = runCatching {
+        val uid = currentUserId() ?: return@runCatching emptyList()
+        val snapshot = db.collection(FirestoreCollections.USERS)
+            .document(uid)
+            .collection(FirestoreCollections.COLLECTION)
+            .get()
+            .await()
+        snapshot.documents.mapNotNull { doc ->
+            val data = doc.data ?: return@mapNotNull null
+            CollectionItem(
+                id = doc.id,
+                songId = (data["songId"] as? String) ?: "",
+                title = (data["title"] as? String) ?: "",
+                artist = (data["artist"] as? String) ?: "",
+                mode = (data["mode"] as? String) ?: "SYNC",
+                coverUrl = (data["coverUrl"] as? String) ?: ""
+            )
+        }
+    }.getOrElse { emptyList() }
+
     suspend fun addToCollection(songId: String, title: String, artist: String, mode: String, coverUrl: String = ""): Result<Unit> = runCatching {
         val uid = currentUserId() ?: throw IllegalStateException("Not logged in")
         val docId = collectionDocId(songId, mode)
