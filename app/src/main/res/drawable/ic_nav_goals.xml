@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Trophy-like icon representing Goals (similar to Icons.Default.EmojiEvents) -->
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17,3h-2V2H9v1H7c-0.55,0 -1,0.45 -1,1v3c0,2.21 1.79,4 4,4h1v2H9v2h6v-2h-2v-2h1c2.21,0 4,-1.79 4,-4V4c0,-0.55 -0.45,-1 -1,-1zM8,7V5h1v3.17C8.41,7.84 8,7.47 8,7zM16,7c0,0.47 -0.41,0.84 -1,1.17V5h1V7zM9,19v1h6v-1H9z" />
+</vector>
+
