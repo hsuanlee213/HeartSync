@@ -73,7 +73,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
-import com.heartbeatmusic.BuildConfig
 import com.heartbeatmusic.R
 import com.heartbeatmusic.heartsync.HeartSyncViewModel
 import kotlinx.coroutines.launch
@@ -112,7 +111,6 @@ fun GeometricHeartContent(
     val displayFirstTag by viewModel.displayFirstTag.collectAsStateWithLifecycle()
     val displayCoverColor by viewModel.displayCoverColor.collectAsStateWithLifecycle()
     val playbackProgress by viewModel.playbackProgress.collectAsStateWithLifecycle()
-    val playbackSource by viewModel.playbackSource.collectAsStateWithLifecycle()
     LaunchedEffect(Unit) { viewModel.syncPlaybackState() }
     LaunchedEffect(mode) { viewModel.setTerminalMode(mode) }
     val breathMult = mode.breathMultiplier()
@@ -200,16 +198,6 @@ fun GeometricHeartContent(
     BoxWithConstraints(
         modifier = modifier.fillMaxSize()
     ) {
-        if (BuildConfig.DEBUG) {
-            androidx.compose.material3.Text(
-                text = "Source: $playbackSource",
-                fontSize = 10.sp,
-                color = Color.White.copy(alpha = 0.6f),
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = 8.dp)
-            )
-        }
         val expandedHeightDp: Dp = maxHeight * 0.4f
 
         val panelHeight by animateDpAsState(
