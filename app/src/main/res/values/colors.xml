@@ -13,4 +13,8 @@
     <color name="tech_cyan_border">#4D00FFFF</color>
     <color name="tech_input_bg_transparent">#00000000</color>
     <color name="sync_engine_label">#E0E0E0</color>
+    <!-- Goals sliders palette -->
+    <color name="goals_cyan">#00FFFF</color> <!-- reuse tech_cyan for clarity -->
+    <color name="goals_orange">#FF9800</color> <!-- Orange -->
+    <color name="goals_purple">#9370DB</color> <!-- MediumPurple -->
 </resources>

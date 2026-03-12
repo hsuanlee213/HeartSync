@@ -75,7 +75,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="[ SYNC ENGINE v1.0 ]"
+                android:text="[ GOALS ]"
                 android:textColor="@color/tech_cyan"
                 android:fontFamily="monospace"
                 android:textSize="20sp"
@@ -91,7 +91,7 @@
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="RESPONSE SENSITIVITY"
+                android:text="ZEN ENDURANCE"
                 android:textColor="@color/sync_engine_label"
                 android:fontFamily="monospace"
                 android:textSize="13sp"
@@ -106,14 +106,14 @@
                 android:valueFrom="0"
                 android:valueTo="100"
                 android:value="50"
-                app:thumbColor="@color/tech_cyan"
-                app:trackColorActive="@color/tech_cyan"
+                app:thumbColor="@color/goals_cyan"
+                app:trackColorActive="@color/goals_cyan"
                 app:trackColorInactive="@color/tech_stroke_default" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="SYNC TOLERANCE"
+                android:text="POWER SURGE"
                 android:textColor="@color/sync_engine_label"
                 android:fontFamily="monospace"
                 android:textSize="13sp"
@@ -128,14 +128,14 @@
                 android:valueFrom="0"
                 android:valueTo="100"
                 android:value="50"
-                app:thumbColor="@color/tech_cyan"
-                app:trackColorActive="@color/tech_cyan"
+                app:thumbColor="@color/goals_orange"
+                app:trackColorActive="@color/goals_orange"
                 app:trackColorInactive="@color/tech_stroke_default" />
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="CROSSFADE SPEED"
+                android:text="SMOOTH FLOW"
                 android:textColor="@color/sync_engine_label"
                 android:fontFamily="monospace"
                 android:textSize="13sp"
@@ -149,8 +149,8 @@
                 android:valueFrom="0"
                 android:valueTo="100"
                 android:value="50"
-                app:thumbColor="@color/tech_cyan"
-                app:trackColorActive="@color/tech_cyan"
+                app:thumbColor="@color/goals_purple"
+                app:trackColorActive="@color/goals_purple"
                 app:trackColorInactive="@color/tech_stroke_default" />
         </LinearLayout>
     </ScrollView>
