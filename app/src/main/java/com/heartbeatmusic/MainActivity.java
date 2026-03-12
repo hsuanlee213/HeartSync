@@ -4,7 +4,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.TextView;
+import android.widget.Toast;
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
@@ -29,6 +31,7 @@ import com.heartbeatmusic.terminal.TerminalModeHolder;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "MainActivity";
     private static final String TAG_TERMINAL = "terminal";
     private static final String TAG_ARCHIVE = "archive";
     private static final String TAG_SYNC_ENGINE = "sync_engine";
@@ -40,6 +43,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        // Global exception handler: log and prevent app freeze on Firebase/Google API failures (e.g. DEVELOPER_ERROR)
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            Log.e(TAG, "Uncaught exception", throwable);
+            runOnUiThread(() -> {
+                try {
+                    Toast.makeText(this, "An error occurred. Please try again.", Toast.LENGTH_LONG).show();
+                } catch (Throwable t) {
+                    Log.e(TAG, "Failed to show error toast", t);
+                }
+            });
+            Thread.getDefaultUncaughtExceptionHandler().uncaughtException(thread, throwable);
+        });
 
         prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE);
         BioProfile savedProfile = BioProfileStorage.INSTANCE.load(prefs);
@@ -119,7 +135,12 @@ public class MainActivity extends AppCompatActivity {
         String initials = getInitials(username);
         tvUsername.setText(initials);
         tvUsername.setOnClickListener(v -> {
-            startActivity(new Intent(this, UserProfileActivity.class));
+            try {
+                startActivity(new Intent(this, UserProfileActivity.class));
+            } catch (Throwable t) {
+                Log.e(TAG, "Failed to open Profile (e.g. Google API DEVELOPER_ERROR)", t);
+                Toast.makeText(this, "Could not open profile. Please try again.", Toast.LENGTH_SHORT).show();
+            }
         });
     }
 

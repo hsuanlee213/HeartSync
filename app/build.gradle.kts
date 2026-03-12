@@ -19,6 +19,12 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // For Google/Firebase DEVELOPER_ERROR: ensure google-services.json is in app/ and add your
+    // debug/release SHA-1 in Firebase Console (Project Settings > Your apps). Optionally set signingConfigs:
+    // signingConfigs {
+    //     getByName("debug") { ... }
+    //     create("release") { storeFile = file(".."); storePassword = "..."; keyAlias = "..."; keyPassword = "..." }
+    // }
     buildTypes {
         release {
             isMinifyEnabled = false
@@ -26,6 +32,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            // signingConfig = signingConfigs.getByName("release")  // uncomment when release keystore is set
         }
     }
     compileOptions {
@@ -34,6 +41,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = "11"
+        freeCompilerArgs += listOf(
+            "-opt-in=androidx.compose.material3.ExperimentalMaterial3Api"
+        )
     }
     buildFeatures {
         compose = true
@@ -78,6 +88,7 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.7.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.7.0")
     implementation("io.coil-kt:coil-compose:2.5.0")
+    implementation("androidx.navigation:navigation-compose:2.7.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation(libs.junit)
