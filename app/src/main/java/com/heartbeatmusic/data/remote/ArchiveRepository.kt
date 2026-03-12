@@ -33,6 +33,28 @@ class ArchiveRepository {
             .await()
     }
 
+    /** Fetch sessions once (for initial sync from Firestore into local DB). */
+    suspend fun getSessionsOnce(): List<SyncSession> = runCatching {
+        val uid = currentUserId() ?: return@runCatching emptyList()
+        val snapshot = db.collection(FirestoreCollections.SYNC_SESSIONS)
+            .whereEqualTo("userId", uid)
+            .get()
+            .await()
+        snapshot.documents.mapNotNull { doc ->
+            val data = doc.data ?: return@mapNotNull null
+            SyncSession(
+                id = doc.id,
+                userId = (data["userId"] as? String) ?: "",
+                mode = (data["mode"] as? String) ?: "SYNC",
+                startTimestamp = (data["startTimestamp"] as? Number)?.toLong() ?: 0L,
+                endTimestamp = (data["endTimestamp"] as? Number)?.toLong() ?: 0L,
+                durationMinutes = (data["durationMinutes"] as? Number)?.toInt() ?: 0,
+                songIds = (data["songIds"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                songTitles = (data["songTitles"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+            )
+        }.sortedByDescending { it.endTimestamp }
+    }.getOrElse { emptyList() }
+
     fun sessionsFlow(): Flow<List<SyncSession>> = callbackFlow {
         val uid = currentUserId() ?: run {
             trySend(emptyList())

@@ -267,6 +267,8 @@ private fun SessionsContent(
             val sessionToRestore = session
             viewModel.removeSessionFromUI(session.id)
             deletingSessionIds = deletingSessionIds - session.id
+            // Persist delete immediately so state stays consistent across tabs and restarts.
+            viewModel.deleteFromDb(session.id)
             val result = snackbarHostState.showSnackbar(
                 message = "Session removed",
                 actionLabel = "UNDO",
@@ -275,10 +277,9 @@ private fun SessionsContent(
             when (result) {
                 SnackbarResult.ActionPerformed -> {
                     viewModel.restoreSession(sessionToRestore)
+                    viewModel.saveSession(sessionToRestore)
                 }
-                SnackbarResult.Dismissed -> {
-                    viewModel.deleteFromDb(session.id)
-                }
+                SnackbarResult.Dismissed -> { /* already deleted above */ }
             }
         }
     }

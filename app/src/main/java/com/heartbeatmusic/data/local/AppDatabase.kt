@@ -5,9 +5,17 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 
-@Database(entities = [CollectionItemEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [
+        CollectionItemEntity::class,
+        SyncSessionEntity::class
+    ],
+    version = 2,
+    exportSchema = false
+)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun collectionDao(): CollectionDao
+    abstract fun syncSessionDao(): SyncSessionDao
 
     companion object {
         @Volatile
@@ -23,6 +31,9 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "heartbeat_db"
-            ).build()
+            )
+                // v1 -> v2: add SyncSession table
+                .fallbackToDestructiveMigration()
+                .build()
     }
 }

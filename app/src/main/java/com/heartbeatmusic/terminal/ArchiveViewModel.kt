@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.local.CollectionRepository
+import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +20,7 @@ class ArchiveViewModel(application: Application) : AndroidViewModel(application)
 
     private val repository = ArchiveRepository()
     private val collectionRepository = CollectionRepository(application, repository)
+    private val sessionRepository = SessionRepository(application, repository)
 
     private val pendingDeletion = mutableSetOf<String>()
 
@@ -32,16 +34,15 @@ class ArchiveViewModel(application: Application) : AndroidViewModel(application)
     val collection: StateFlow<List<CollectionItem>> = _collection.asStateFlow()
 
     init {
-        repository.sessionsFlow()
-            .onEach { fromDb ->
-                _sessions.value = fromDb.filter { it.id !in pendingDeletion }
-            }
+        sessionRepository.sessionsFlow()
+            .onEach { fromDb -> _sessions.value = fromDb.filter { it.id !in pendingDeletion } }
             .launchIn(viewModelScope)
         collectionRepository.collectionFlow()
             .onEach { _collection.value = it }
             .launchIn(viewModelScope)
         viewModelScope.launch(Dispatchers.IO) {
             collectionRepository.syncFromFirestore()
+            sessionRepository.syncFromFirestore()
         }
     }
 
@@ -64,7 +65,13 @@ class ArchiveViewModel(application: Application) : AndroidViewModel(application)
     fun deleteFromDb(sessionId: String) {
         pendingDeletion.remove(sessionId)
         viewModelScope.launch(Dispatchers.IO) {
-            repository.deleteSession(sessionId)
+            sessionRepository.deleteSession(sessionId)
+        }
+    }
+
+    fun saveSession(session: SyncSession) {
+        viewModelScope.launch(Dispatchers.IO) {
+            sessionRepository.saveSession(session)
         }
     }
 
