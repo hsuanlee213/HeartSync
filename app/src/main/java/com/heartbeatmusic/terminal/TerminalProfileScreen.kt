@@ -43,6 +43,8 @@ private val AvatarGradientStart = Color(0xFF1A0033)
 private val AvatarGradientEnd = Color(0xFFFF1493)
 private val DividerDark = Color(0xFF0D001A)
 private val TextSecondary = Color(0xFFB3B3CC)
+/** Bright neon red for Logout button: full opacity, high contrast on deep purple */
+private val NeonRed = Color(0xFFFF1744)
 
 /**
  * HeartSync Profile screen: all-English, Deep Purple theme, neon cyan accents,
@@ -170,7 +172,7 @@ fun TerminalProfileScreen(
         // Push content up so Logout sits at bottom
         Spacer(modifier = Modifier.weight(1f))
 
-        // Bottom: Logout (OutlinedButton, error color, spaced from menu)
+        // Bottom: Logout (OutlinedButton, neon red, full opacity, high contrast)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -181,13 +183,14 @@ fun TerminalProfileScreen(
                 onClick = onLogout,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.outlinedButtonColors(
-                    contentColor = MaterialTheme.colorScheme.error
+                    contentColor = NeonRed
                 ),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.error)
+                border = BorderStroke(1.dp, NeonRed)
             ) {
                 Text(
                     text = "Logout",
-                    style = MaterialTheme.typography.bodyLarge
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = NeonRed
                 )
             }
         }
