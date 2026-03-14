@@ -16,6 +16,7 @@ import com.heartbeatmusic.data.model.Song
 import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.local.EssentialAudioRepository
+import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.terminal.TerminalModeHolder
@@ -167,6 +168,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val archiveRepository = ArchiveRepository()
     private val essentialAudioRepository = EssentialAudioRepository(application)
     private val collectionRepository = CollectionRepository(application, archiveRepository)
+    private val sessionRepository = SessionRepository(application, archiveRepository)
     private var progressJob: Job? = null
 
     private var sessionStartTime: Long? = null
@@ -618,8 +620,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
                         songTitles = songs.map { it.second }
                     )
                     viewModelScope.launch {
-                        archiveRepository.saveSession(session)
-                            .onFailure { Log.e(TAG, "Failed to save session", it) }
+                        sessionRepository.saveSession(session)
                     }
                 }
             }
