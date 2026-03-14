@@ -2,14 +2,51 @@
 
 ## 現況
 
-專案已有兩套音樂來源：
+專案已有三套音樂來源：
 
 | 來源 | 用途 | 狀態 |
 |------|------|------|
+| **Firebase Storage `essentials/`** | ZEN/SYNC/OVERDRIVE 模式離線音檔 | 需執行上傳腳本，App 會快取至本地 |
 | **Firestore `songs`** | Music Library 播放 | 需執行種子腳本寫入資料 |
 | **Jamendo API** | MusicDiscoveryPlayer（BPM 推薦） | 目前為 Mock，URL 為假資料 |
 
-主畫面的 Play 按鈕與 Terminal 動畫使用的是 **PlayerHolder**，音樂來自 **Music Library**（Firestore）。
+主畫面的 Play 按鈕與 Terminal 動畫使用的是 **PlayerHolder**，音樂來自 **Music Library**（Firestore）或 **Essential Audio**（Firebase Storage + 本地快取）。
+
+---
+
+## Essential Audio（Firebase Storage + 本地快取）
+
+三個模式（ZEN、SYNC、OVERDRIVE）的測試音檔存放在 Firebase Storage，App 首次播放時下載並快取至本地，之後離線也可播放。
+
+### 上傳 Essential 音檔到 Firebase Storage
+
+1. 建立 `scripts/essentials/`，將 `zen.mp3`、`sync.mp3`、`overdrive.mp3` 放入
+2. 執行上傳腳本：
+
+```bash
+cd scripts
+npm install firebase-admin   # 若尚未安裝
+node upload-essentials-to-storage.js
+```
+
+3. 在 Firebase Console → Storage 確認 `essentials/` 資料夾下有 3 個 mp3 檔
+4. 設定 Storage 規則允許讀取：
+
+```
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /essentials/{allPaths=**} {
+      allow read: if true;
+    }
+  }
+}
+```
+
+### 播放流程
+
+- **有網路**：從 Firebase Storage 下載 → 快取至 `files/essentials/` → 播放
+- **無網路**：若已快取則直接播放；否則無法播放（需先連線下載）
 
 ---
 
@@ -79,7 +116,9 @@ service cloud.firestore {
 ## 快速檢查清單
 
 - [ ] `scripts/serviceAccountKey.json` 已存在
-- [ ] 已執行 `node seed-firestore.js`
+- [ ] 已執行 `node upload-essentials-to-storage.js`（Essential 音檔）
+- [ ] 已執行 `node seed-firestore.js`（Music Library）
+- [ ] Firebase Storage 規則允許讀取 `essentials/`
 - [ ] Firestore 規則允許讀取 `songs`
 - [ ] 已登入 App
 - [ ] 已從 Music Library 選擇並播放一首歌

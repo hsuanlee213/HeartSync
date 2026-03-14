@@ -18,5 +18,6 @@ local.properties
 
 # Firebase 腳本用（勿提交金鑰）
 scripts/node_modules/
+scripts/essentials/
 **/serviceAccountKey.json
 **/serviceAccountKey.*.json

@@ -15,10 +15,10 @@ import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.Song
 import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.local.CollectionRepository
+import com.heartbeatmusic.data.local.EssentialAudioRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.terminal.TerminalModeHolder
-import com.heartbeatmusic.R
 import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -165,6 +165,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     private val player = PlayerHolder.getInstance(application).getPlayer()
     private val libraryRepository = LibraryRepository()
     private val archiveRepository = ArchiveRepository()
+    private val essentialAudioRepository = EssentialAudioRepository(application)
     private val collectionRepository = CollectionRepository(application, archiveRepository)
     private var progressJob: Job? = null
 
@@ -278,59 +279,61 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         player.stop()
         player.clearMediaItems()
         stopProgressUpdates()
-        doPlayEssentials(useResRaw = false)
+        doPlayEssentials()
     }
 
-    /** Called from Player.Listener when asset load fails. Uses res/raw fallback. */
+    /** Called from Player.Listener when asset load fails. Retries from local cache. */
     internal fun fallbackToResRaw() {
-        doPlayEssentials(useResRaw = true)
+        doPlayEssentials()
     }
 
-    private fun doPlayEssentials(useResRaw: Boolean) {
+    private fun doPlayEssentials() {
         val mode = TerminalModeHolder.getCurrentMode()
         _playingMode.value = mode
         _isPanelExpanded.value = true
         _playbackSource.value = "Local"
-        val pkg = getApplication<android.app.Application>().packageName
-        val (uri, title, artist) = when (mode) {
-            TerminalMode.ZEN -> Triple(
-                if (useResRaw) Uri.parse("android.resource://$pkg/${R.raw.essential_zen}")
-                else Uri.parse("file:///android_asset/essentials/zen.mp3"),
-                "Eternal Peace (Offline)", "Calm Master"
-            )
-            TerminalMode.SYNC -> Triple(
-                if (useResRaw) Uri.parse("android.resource://$pkg/${R.raw.essential_sync}")
-                else Uri.parse("file:///android_asset/essentials/sync.mp3"),
-                "Digital Pulse (Offline)", "Sync Theory"
-            )
-            TerminalMode.OVERDRIVE -> Triple(
-                if (useResRaw) Uri.parse("android.resource://$pkg/${R.raw.essential_overdrive}")
-                else Uri.parse("file:///android_asset/essentials/overdrive.mp3"),
-                "System Overload (Offline)", "Kinetic Power"
-            )
+        val (title, artist) = when (mode) {
+            TerminalMode.ZEN -> "Eternal Peace (Offline)" to "Calm Master"
+            TerminalMode.SYNC -> "Digital Pulse (Offline)" to "Sync Theory"
+            TerminalMode.OVERDRIVE -> "System Overload (Offline)" to "Kinetic Power"
         }
-        Log.d(TAG, "HeartSync_Debug: ExoPlayer loading: $uri")
-        val songId = "essential_${mode.name}"
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(songId)
-            .setUri(uri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
+        viewModelScope.launch {
+            val uri = essentialAudioRepository.getUriForMode(mode)
+            if (uri == null) {
+                Log.w(TAG, "HeartSync_Debug: No local cache for ${mode.name}. Connect to network to download from Firebase Storage.")
+                launch(Dispatchers.Main.immediate) {
+                    _displayTitle.value = title
+                    _displayArtist.value = artist
+                    _displayFirstTag.value = ""
+                    _isPanelExpanded.value = true
+                }
+                return@launch
+            }
+            Log.d(TAG, "HeartSync_Debug: ExoPlayer loading from cache: $uri")
+            launch(Dispatchers.Main.immediate) {
+                val songId = "essential_${mode.name}"
+                val mediaItem = MediaItem.Builder()
+                    .setMediaId(songId)
+                    .setUri(uri)
+                    .setMediaMetadata(
+                        MediaMetadata.Builder()
+                            .setTitle(title)
+                            .setArtist(artist)
+                            .build()
+                    )
                     .build()
-            )
-            .build()
-        player.setMediaItem(mediaItem)
-        player.prepare()
-        player.play()
-        _currentSongId.value = songId
-        _displayTitle.value = title
-        _displayArtist.value = artist
-        _displayFirstTag.value = ""
-        _displayCoverColor.value = null
-        _isMusicPlaying.value = true
-        suppressIsPlayingFalseForNetworkFallback = false
+                player.setMediaItem(mediaItem)
+                player.prepare()
+                player.play()
+                _currentSongId.value = songId
+                _displayTitle.value = title
+                _displayArtist.value = artist
+                _displayFirstTag.value = ""
+                _displayCoverColor.value = null
+                _isMusicPlaying.value = true
+                suppressIsPlayingFalseForNetworkFallback = false
+            }
+        }
     }
 
     private fun isNetworkAvailable(): Boolean {
@@ -529,21 +532,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         }
     }
 
-    /** Play local asset from assets/essentials (e.g. zen.mp3, sync.mp3, overdrive.mp3). */
+    /** Play essential audio from local cache (Firebase Storage). */
     internal fun playLocalAsset() {
-        Log.d(TAG, "HeartSync_Debug: Offline Mode Active")
-        val mode = TerminalModeHolder.getCurrentMode()
-        val assetPath = when (mode) {
-            TerminalMode.ZEN -> "essentials/zen.mp3"
-            TerminalMode.SYNC -> "essentials/sync.mp3"
-            TerminalMode.OVERDRIVE -> "essentials/overdrive.mp3"
-        }
-        try {
-            getApplication<Application>().assets.open(assetPath).use { }
-            Log.d(TAG, "HeartSync_Debug: Asset file found and opened successfully: $assetPath")
-        } catch (e: Exception) {
-            Log.e(TAG, "HeartSync_Debug: FATAL: Cannot find asset file: ${e.message}")
-        }
+        Log.d(TAG, "HeartSync_Debug: Offline Mode Active - using cache or bundled fallback")
         playFromEssentials()
     }
 
@@ -578,9 +569,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
         _displayCoverColor.value = null
     }
 
-    /** Play from assets/essentials or res/raw. useResRaw=true for fallback when assets fail. */
-    internal fun playFromEssentials(useResRaw: Boolean = false) {
-        doPlayEssentials(useResRaw)
+    /** Play from Firebase Storage local cache. */
+    internal fun playFromEssentials() {
+        doPlayEssentials()
     }
 
     /** Stop playback and clear media. Collapses the panel. Saves session if one was active. */

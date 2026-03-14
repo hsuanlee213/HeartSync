@@ -1,9 +1,14 @@
-# Essentials - Offline Audio Fallback
+# Essentials - Upload Source (not bundled in app)
 
-Place 3 audio files here for offline playback when API/network fails:
+Test audio is stored in Firebase Storage. The app downloads and caches locally.
 
-- **zen.mp3** – ZEN mode (ambient, meditation)
-- **sync.mp3** – SYNC mode (deep house, lofi)
-- **overdrive.mp3** – OVERDRIVE mode (techno, high-tempo)
+To upload audio files:
 
-The app will automatically use these when Firestore/network is unavailable.
+1. Create `scripts/essentials/` and place:
+   - **zen.mp3** – ZEN mode (ambient, meditation)
+   - **sync.mp3** – SYNC mode (deep house, lofi)
+   - **overdrive.mp3** – OVERDRIVE mode (techno, high-tempo)
+
+2. Run: `cd scripts && node upload-essentials-to-storage.js`
+
+These files are not bundled in the app.
