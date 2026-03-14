@@ -18,7 +18,6 @@ import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.terminal.TerminalModeHolder
-import com.heartbeatmusic.terminal.toActivityMode
 import com.heartbeatmusic.R
 import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,13 +78,13 @@ private val MOCK_SONGS: Map<TerminalMode, MockSong> = mapOf(
  */
 class HeartSyncViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val heartRateProvider = MockHeartRateProvider(viewModelScope, ActivityMode.CALM)
+    private val heartRateProvider = MockHeartRateProvider(viewModelScope, TerminalMode.SYNC)
 
     private val _currentHeartRate = MutableStateFlow(0)
     val currentHeartRate: StateFlow<Int> = _currentHeartRate.asStateFlow()
 
-    private val _currentMode = MutableStateFlow(ActivityMode.CALM)
-    val currentMode: StateFlow<ActivityMode> = _currentMode.asStateFlow()
+    private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
+    val currentMode: StateFlow<TerminalMode> = _currentMode.asStateFlow()
 
     private val _isMusicPlaying = MutableStateFlow(false)
     val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
@@ -482,10 +481,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
             player.clearMediaItems()
             stopProgressUpdates()
 
-            val activityMode = mode.toActivityMode()
-            _currentMode.value = activityMode
+            _currentMode.value = mode
             if (heartRateProvider is MockHeartRateProvider) {
-                heartRateProvider.setMode(activityMode)
+                heartRateProvider.setMode(mode)
             }
             MOCK_SONGS[mode]?.let { mock ->
                 _displayTitle.value = mock.title
@@ -669,9 +667,9 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     /**
-     * Switch activity mode, affects BPM range emitted by Mock provider.
+     * Switch terminal mode, affects BPM range emitted by Mock provider.
      */
-    fun setMode(mode: ActivityMode) {
+    fun setMode(mode: TerminalMode) {
         _currentMode.value = mode
         if (heartRateProvider is MockHeartRateProvider) {
             heartRateProvider.setMode(mode)
@@ -712,7 +710,7 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
      * Switch Terminal mode. Updates display to mock song and logs.
      */
     fun setTerminalMode(mode: TerminalMode) {
-        setMode(mode.toActivityMode())
+        setMode(mode)
         val mock = MOCK_SONGS[mode] ?: return
         _displayTitle.value = mock.title
         _displayArtist.value = mock.artist

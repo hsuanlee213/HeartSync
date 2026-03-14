@@ -1,5 +1,6 @@
 package com.heartbeatmusic.heartsync
 
+import com.heartbeatmusic.terminal.TerminalMode
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -12,14 +13,14 @@ import kotlin.random.Random
 
 /**
  * Mock heart rate data provider.
- * Simulates different BPM ranges based on currentMode, emits random value every second.
+ * Simulates different BPM ranges based on current mode (ZEN/SYNC/OVERDRIVE), emits random value every second.
  *
  * @param scope CoroutineScope for launching monitoring (use viewModelScope to avoid memory leaks)
- * @param initialMode Initial activity mode
+ * @param initialMode Initial terminal mode
  */
 class MockHeartRateProvider(
     private val scope: CoroutineScope,
-    private var currentMode: ActivityMode = ActivityMode.CALM
+    private var currentMode: TerminalMode = TerminalMode.SYNC
 ) : HeartRateProvider {
 
     private val _heartRateFlow = MutableSharedFlow<Int>(replay = 1)
@@ -30,7 +31,7 @@ class MockHeartRateProvider(
     /**
      * Update current mode, affects subsequent BPM range emissions.
      */
-    fun setMode(mode: ActivityMode) {
+    fun setMode(mode: TerminalMode) {
         currentMode = mode
     }
 

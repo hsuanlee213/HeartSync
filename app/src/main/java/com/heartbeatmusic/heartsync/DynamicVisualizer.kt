@@ -1,5 +1,6 @@
 package com.heartbeatmusic.heartsync
 
+import com.heartbeatmusic.terminal.TerminalMode
 import androidx.compose.animation.core.Animatable
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -19,23 +20,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawBehind
 
-private val CalmPrimary = Color(0xFF4A90A4)
-private val CalmSecondary = Color(0xFF2D5A6B)
-private val DrivingPrimary = Color(0xFFE07C3C)
-private val DrivingSecondary = Color(0xFFB85C2A)
-private val ExercisePrimary = Color(0xFFD84315)
-private val ExerciseSecondary = Color(0xFFBF360C)
+private val ZenPrimary = Color(0xFF4A90A4)
+private val ZenSecondary = Color(0xFF2D5A6B)
+private val SyncPrimary = Color(0xFFE07C3C)
+private val SyncSecondary = Color(0xFFB85C2A)
+private val OverdrivePrimary = Color(0xFFD84315)
+private val OverdriveSecondary = Color(0xFFBF360C)
 
-private fun ActivityMode.primaryColor(): Color = when (this) {
-    ActivityMode.CALM -> CalmPrimary
-    ActivityMode.DRIVING -> DrivingPrimary
-    ActivityMode.EXERCISE -> ExercisePrimary
+private fun TerminalMode.primaryColor(): Color = when (this) {
+    TerminalMode.ZEN -> ZenPrimary
+    TerminalMode.SYNC -> SyncPrimary
+    TerminalMode.OVERDRIVE -> OverdrivePrimary
 }
 
-private fun ActivityMode.secondaryColor(): Color = when (this) {
-    ActivityMode.CALM -> CalmSecondary
-    ActivityMode.DRIVING -> DrivingSecondary
-    ActivityMode.EXERCISE -> ExerciseSecondary
+private fun TerminalMode.secondaryColor(): Color = when (this) {
+    TerminalMode.ZEN -> ZenSecondary
+    TerminalMode.SYNC -> SyncSecondary
+    TerminalMode.OVERDRIVE -> OverdriveSecondary
 }
 
 /**
@@ -45,7 +46,7 @@ private fun ActivityMode.secondaryColor(): Color = when (this) {
 @Composable
 fun DynamicVisualizerBackground(
     modifier: Modifier = Modifier,
-    currentMode: ActivityMode
+    currentMode: TerminalMode
 ) {
     val primary by animateColorAsState(
         targetValue = currentMode.primaryColor(),
@@ -127,7 +128,7 @@ fun DynamicVisualizerPulse(
 fun DynamicVisualizer(
     modifier: Modifier = Modifier,
     currentBpm: Int,
-    currentMode: ActivityMode
+    currentMode: TerminalMode
 ) {
     Box(modifier = modifier.fillMaxSize()) {
         DynamicVisualizerBackground(currentMode = currentMode)

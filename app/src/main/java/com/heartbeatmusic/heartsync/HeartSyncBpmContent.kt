@@ -1,5 +1,6 @@
 package com.heartbeatmusic.heartsync
 
+import com.heartbeatmusic.terminal.TerminalMode
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Animatable
@@ -29,10 +30,10 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
-private fun ActivityMode.primaryColor(): Color = when (this) {
-    ActivityMode.CALM -> Color(0xFF4A90A4)
-    ActivityMode.DRIVING -> Color(0xFFE07C3C)
-    ActivityMode.EXERCISE -> Color(0xFFD84315)
+private fun TerminalMode.primaryColor(): Color = when (this) {
+    TerminalMode.ZEN -> Color(0xFF4A90A4)
+    TerminalMode.SYNC -> Color(0xFFE07C3C)
+    TerminalMode.OVERDRIVE -> Color(0xFFD84315)
 }
 
 /**
@@ -61,10 +62,10 @@ private fun PulseCircle(
     }
 }
 
-private fun ActivityMode.scaleRange(): Pair<Float, Float> = when (this) {
-    ActivityMode.CALM -> 0.85f to 1.2f
-    ActivityMode.DRIVING -> 0.82f to 1.22f
-    ActivityMode.EXERCISE -> 0.88f to 1.15f
+private fun TerminalMode.scaleRange(): Pair<Float, Float> = when (this) {
+    TerminalMode.ZEN -> 0.85f to 1.2f
+    TerminalMode.SYNC -> 0.82f to 1.22f
+    TerminalMode.OVERDRIVE -> 0.88f to 1.15f
 }
 
 /**
