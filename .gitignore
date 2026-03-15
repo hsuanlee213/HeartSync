@@ -9,6 +9,7 @@
 /.idea/assetWizardSettings.xml
 .DS_Store
 .cursor/
+.claude/
 docs/PRD.md
 /build
 /captures

@@ -173,7 +173,7 @@ class HeartSyncViewModel @Inject constructor(
         initialValue = false
     )
 
-    private val player = PlayerHolder.getInstance(application).getPlayer()
+    private val player = PlayerHolder.getInstance(application).player
     private var progressJob: Job? = null
 
     private var sessionStartTime: Long? = null
