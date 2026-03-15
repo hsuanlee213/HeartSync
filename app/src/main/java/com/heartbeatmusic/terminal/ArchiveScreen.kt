@@ -432,7 +432,8 @@ private fun SessionCard(
 ) {
     val shortId = session.id.takeLast(8).uppercase()
     val dateStr = formatDate(Date(session.endTimestamp))
-    val durationStr = "${session.durationMinutes}m"
+    val durationSec = ((session.endTimestamp - session.startTimestamp) / 1_000).toInt().coerceAtLeast(0)
+    val durationStr = if (durationSec >= 60) "${durationSec / 60}m" else "${durationSec}s"
     val songCount = session.songIds.size
     val songs = session.songIds.zip(session.songTitles) { id, title -> id to title }
 
