@@ -1,12 +1,12 @@
 package com.heartbeatmusic.profile
 
-import android.app.Application
 import android.net.Uri
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.data.local.AvatarRepository
 import com.heartbeatmusic.data.local.UserProfileEntity
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class AvatarUiState(
     val avatarLocalUri: String? = null,
@@ -26,10 +27,12 @@ data class AvatarUiState(
 /**
  * Holds avatar state and performs local-first updates with background Firebase sync.
  */
-class UserAvatarViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class UserAvatarViewModel @Inject constructor(
+    private val repo: AvatarRepository
+) : ViewModel() {
 
     private val auth = FirebaseAuth.getInstance()
-    private val repo = AvatarRepository(application)
 
     private val _uiState = MutableStateFlow(AvatarUiState())
     val uiState: StateFlow<AvatarUiState> = _uiState.asStateFlow()

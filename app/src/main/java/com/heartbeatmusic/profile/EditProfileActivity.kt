@@ -3,6 +3,7 @@ package com.heartbeatmusic.profile
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import dagger.hilt.android.AndroidEntryPoint
 
 /**
  * Simple activity hosting [EditProfileScreen] for future use.
@@ -12,6 +13,7 @@ import androidx.activity.compose.setContent
  * You can manually start it later when you are ready to integrate
  * avatar editing into the app.
  */
+@AndroidEntryPoint
 class EditProfileActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

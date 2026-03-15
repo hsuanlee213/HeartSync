@@ -1,0 +1,54 @@
+package com.heartbeatmusic.di
+
+import android.content.Context
+import com.heartbeatmusic.data.local.AvatarRepository
+import com.heartbeatmusic.data.local.CollectionRepository
+import com.heartbeatmusic.data.local.EssentialAudioRepository
+import com.heartbeatmusic.data.local.SessionRepository
+import com.heartbeatmusic.data.remote.ArchiveRepository
+import com.heartbeatmusic.data.remote.LibraryRepository
+import dagger.Module
+import dagger.Provides
+import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
+import dagger.hilt.components.SingletonComponent
+import javax.inject.Singleton
+
+@Module
+@InstallIn(SingletonComponent::class)
+object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideArchiveRepository(): ArchiveRepository = ArchiveRepository()
+
+    @Provides
+    @Singleton
+    fun provideLibraryRepository(): LibraryRepository = LibraryRepository()
+
+    @Provides
+    @Singleton
+    fun provideCollectionRepository(
+        @ApplicationContext context: Context,
+        archiveRepository: ArchiveRepository
+    ): CollectionRepository = CollectionRepository(context, archiveRepository)
+
+    @Provides
+    @Singleton
+    fun provideSessionRepository(
+        @ApplicationContext context: Context,
+        archiveRepository: ArchiveRepository
+    ): SessionRepository = SessionRepository(context, archiveRepository)
+
+    @Provides
+    @Singleton
+    fun provideAvatarRepository(
+        @ApplicationContext context: Context
+    ): AvatarRepository = AvatarRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideEssentialAudioRepository(
+        @ApplicationContext context: Context
+    ): EssentialAudioRepository = EssentialAudioRepository(context)
+}

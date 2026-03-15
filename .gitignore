@@ -16,6 +16,8 @@ docs/PRD.md
 .cxx
 local.properties
 
+todo.md
+
 # Firebase 腳本用（勿提交金鑰）
 scripts/node_modules/
 scripts/essentials/

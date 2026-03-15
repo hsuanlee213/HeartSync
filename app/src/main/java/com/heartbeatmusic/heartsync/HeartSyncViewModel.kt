@@ -9,6 +9,8 @@ import android.util.Log
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.PlayerHolder
 import com.heartbeatmusic.data.model.CollectionItem
@@ -77,7 +79,15 @@ private val MOCK_SONGS: Map<TerminalMode, MockSong> = mapOf(
  * HeartSync ViewModel.
  * Exposes heart rate and playback state for UI observation.
  */
-class HeartSyncViewModel(application: Application) : AndroidViewModel(application) {
+@HiltViewModel
+class HeartSyncViewModel @Inject constructor(
+    application: Application,
+    private val libraryRepository: LibraryRepository,
+    private val archiveRepository: ArchiveRepository,
+    private val essentialAudioRepository: EssentialAudioRepository,
+    private val collectionRepository: CollectionRepository,
+    private val sessionRepository: SessionRepository
+) : AndroidViewModel(application) {
 
     private val heartRateProvider = MockHeartRateProvider(viewModelScope, TerminalMode.SYNC)
 
@@ -164,11 +174,6 @@ class HeartSyncViewModel(application: Application) : AndroidViewModel(applicatio
     )
 
     private val player = PlayerHolder.getInstance(application).getPlayer()
-    private val libraryRepository = LibraryRepository()
-    private val archiveRepository = ArchiveRepository()
-    private val essentialAudioRepository = EssentialAudioRepository(application)
-    private val collectionRepository = CollectionRepository(application, archiveRepository)
-    private val sessionRepository = SessionRepository(application, archiveRepository)
     private var progressJob: Job? = null
 
     private var sessionStartTime: Long? = null

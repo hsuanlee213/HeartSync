@@ -1,13 +1,12 @@
 package com.heartbeatmusic.terminal
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.local.SessionRepository
-import com.heartbeatmusic.data.remote.ArchiveRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,12 +14,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ArchiveViewModel(application: Application) : AndroidViewModel(application) {
-
-    private val repository = ArchiveRepository()
-    private val collectionRepository = CollectionRepository(application, repository)
-    private val sessionRepository = SessionRepository(application, repository)
+@HiltViewModel
+class ArchiveViewModel @Inject constructor(
+    private val collectionRepository: CollectionRepository,
+    private val sessionRepository: SessionRepository
+) : ViewModel() {
 
     private val pendingDeletion = mutableSetOf<String>()
 

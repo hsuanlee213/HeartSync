@@ -20,7 +20,9 @@ import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.heartbeatmusic.terminal.TerminalProfileScreen
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class UserProfileActivity : AppCompatActivity() {
 
     companion object {

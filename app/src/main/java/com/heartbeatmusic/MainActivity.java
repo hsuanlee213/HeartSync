@@ -28,7 +28,9 @@ import com.heartbeatmusic.terminal.SyncEngineFragment;
 import com.heartbeatmusic.terminal.TerminalFragment;
 import com.heartbeatmusic.terminal.TerminalMode;
 import com.heartbeatmusic.terminal.TerminalModeHolder;
+import dagger.hilt.android.AndroidEntryPoint;
 
+@AndroidEntryPoint
 public class MainActivity extends AppCompatActivity {
 
     private static final String TAG = "MainActivity";

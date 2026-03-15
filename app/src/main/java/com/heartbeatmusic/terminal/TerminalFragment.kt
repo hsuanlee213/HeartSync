@@ -6,11 +6,15 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import com.heartbeatmusic.R
 import com.heartbeatmusic.heartsync.HeartSyncViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class TerminalFragment : Fragment() {
+
+    private val viewModel: HeartSyncViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -22,7 +26,6 @@ class TerminalFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val viewModel = ViewModelProvider(requireActivity())[HeartSyncViewModel::class.java]
         (view.findViewById<ComposeView>(R.id.heart_animation_container))?.setContent {
             GeometricHeartContent(viewModel = viewModel)
         }

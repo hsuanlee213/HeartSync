@@ -6,10 +6,14 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.ViewModelProvider
+import androidx.fragment.app.activityViewModels
 import com.heartbeatmusic.R
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class ArchiveFragment : Fragment() {
+
+    private val viewModel: ArchiveViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -21,7 +25,6 @@ class ArchiveFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        val viewModel = ViewModelProvider(requireActivity())[ArchiveViewModel::class.java]
         (view.findViewById<ComposeView>(R.id.archive_compose))?.setContent {
             ArchiveScreen(viewModel = viewModel)
         }
