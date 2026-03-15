@@ -13,7 +13,6 @@ import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import com.heartbeatmusic.data.model.Song
-import com.heartbeatmusic.data.remote.JamendoApiService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -21,7 +20,6 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /**
  * Singleton Music Discovery Player using Media3 ExoPlayer.
@@ -43,7 +41,6 @@ object MusicDiscoveryPlayer {
 
     private const val FADE_DURATION_MS = 400L
     private const val FADE_STEPS = 20
-    private const val BPM_TOLERANCE = 15
 
     /**
      * Initialize the player. Must be called with Application context before use.
@@ -71,30 +68,6 @@ object MusicDiscoveryPlayer {
 
     fun getCurrentSong(): Song? = _currentSong
     private var _currentSong: Song? = null
-
-    /**
-     * Play next song matching the given BPM.
-     * Uses CoroutineScope to load asynchronously without blocking UI.
-     * Ensure [init] has been called (e.g. from Application.onCreate).
-     */
-    fun playNextByBpm(bpm: Int) {
-        if (player == null) return
-        loadJob?.cancel()
-        loadJob = scope.launch {
-            val result = JamendoApiService.findTracksByBpm(bpm, BPM_TOLERANCE)
-            result.fold(
-                onSuccess = { songs ->
-                    if (songs.isNotEmpty()) {
-                        val song = songs.random()
-                        withContext(Dispatchers.Main) {
-                            playSong(song)
-                        }
-                    }
-                },
-                onFailure = { /* handle error */ }
-            )
-        }
-    }
 
     /**
      * Play a specific song with fade-in.
