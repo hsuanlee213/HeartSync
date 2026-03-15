@@ -45,6 +45,21 @@ import java.net.UnknownHostException
 
 private const val TAG = "HeartSync"
 
+/**
+ * Represents the intent behind an imminent playback state change, so that
+ * [HeartSyncViewModel] can distinguish between user-driven pauses and
+ * transient interruptions caused by network fallback switches.
+ */
+sealed class PlaybackTransition {
+    /** User explicitly pressed pause. Allow UI to reflect the paused state. */
+    object UserPause : PlaybackTransition()
+    /** Player is momentarily stopping while switching to a fallback audio source.
+     *  Suppress the isPlaying=false event so the UI does not flicker. */
+    object NetworkFallback : PlaybackTransition()
+    /** No pending transition — normal playback flow. */
+    object Idle : PlaybackTransition()
+}
+
 /** Mock song for testing per AppMode. */
 data class MockSong(
     val title: String,
@@ -104,9 +119,7 @@ class HeartSyncViewModel @Inject constructor(
     private val _playbackSource = MutableStateFlow("Idle")
     val playbackSource: StateFlow<String> = _playbackSource.asStateFlow()
 
-    private var suppressIsPlayingFalseForNetworkFallback = false
-    /** When true, allow onIsPlayingChanged to set _isMusicPlaying=false (user pressed Pause). */
-    private var userRequestedPause = false
+    private var pendingTransition: PlaybackTransition = PlaybackTransition.Idle
 
     /** Mode that owns the current playback. Null when nothing playing. */
     private val _playingMode = MutableStateFlow<TerminalMode?>(null)
@@ -199,13 +212,13 @@ class HeartSyncViewModel @Inject constructor(
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 viewModelScope.launch(Dispatchers.Main.immediate) {
                     if (!isPlaying) {
-                        if (suppressIsPlayingFalseForNetworkFallback) return@launch
-                        if (_playbackSource.value == "Local" && !userRequestedPause) {
+                        if (pendingTransition is PlaybackTransition.NetworkFallback) return@launch
+                        if (_playbackSource.value == "Local" && pendingTransition !is PlaybackTransition.UserPause) {
                             Log.d(TAG, "HeartSync_Debug: Ignoring isPlaying=false (Local source, not user pause)")
                             return@launch
                         }
                     }
-                    userRequestedPause = false
+                    pendingTransition = PlaybackTransition.Idle
                     _isMusicPlaying.value = isPlaying
                     if (isPlaying) {
                         if (sessionStartTime == null) {
@@ -230,12 +243,12 @@ class HeartSyncViewModel @Inject constructor(
                     val cause = error.cause
                     if (isNetworkRelatedError(cause)) {
                         Log.d(TAG, "HeartSync_Debug: Network down, switching to Assets path.")
-                        suppressIsPlayingFalseForNetworkFallback = true
+                        pendingTransition = PlaybackTransition.NetworkFallback
                         vm.fallbackToEssentialsOnNetworkError()
                     } else {
                         Log.e(TAG, "HeartSync_Debug: ERROR: Asset filename mismatch or missing.", error)
                         if (_playbackSource.value == "Local") {
-                            suppressIsPlayingFalseForNetworkFallback = true
+                            pendingTransition = PlaybackTransition.NetworkFallback
                             vm.fallbackToResRaw()
                         }
                     }
@@ -338,7 +351,7 @@ class HeartSyncViewModel @Inject constructor(
                 _displayFirstTag.value = ""
                 _displayCoverColor.value = null
                 _isMusicPlaying.value = true
-                suppressIsPlayingFalseForNetworkFallback = false
+                pendingTransition = PlaybackTransition.Idle
             }
         }
     }
@@ -460,7 +473,7 @@ class HeartSyncViewModel @Inject constructor(
 
             if (isThisModePlaying) {
                 Log.d(TAG, "HeartSync_Audio: Pausing mode=$currentMode")
-                userRequestedPause = true
+                pendingTransition = PlaybackTransition.UserPause
                 player.pause()
             } else {
                 if (player.currentMediaItem == null) {
