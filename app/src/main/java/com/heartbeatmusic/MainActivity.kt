@@ -124,11 +124,21 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun showFragment(tag: String) {
-        val fragment = supportFragmentManager.findFragmentByTag(tag) ?: createFragmentForTag(tag)
-        supportFragmentManager.beginTransaction()
-            .replace(R.id.fragment_container, fragment, tag)
-            .setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
-            .commit()
+        val fm = supportFragmentManager
+        val transaction = fm.beginTransaction()
+        transaction.setTransition(FragmentTransaction.TRANSIT_FRAGMENT_FADE)
+
+        // Hide all existing fragments
+        fm.fragments.forEach { transaction.hide(it) }
+
+        // Show or add the target fragment
+        val existing = fm.findFragmentByTag(tag)
+        if (existing == null) {
+            transaction.add(R.id.fragment_container, createFragmentForTag(tag), tag)
+        } else {
+            transaction.show(existing)
+        }
+        transaction.commit()
     }
 
     private fun createFragmentForTag(tag: String): Fragment = when (tag) {
