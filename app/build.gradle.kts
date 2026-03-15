@@ -1,3 +1,10 @@
+import java.util.Properties
+
+val localProperties = Properties().apply {
+    val f = rootProject.file("local.properties")
+    if (f.exists()) load(f.inputStream())
+}
+
 plugins {
     id("com.android.application")
     id("com.google.gms.google-services")
@@ -19,6 +26,7 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        buildConfigField("String", "JAMENDO_CLIENT_ID", "\"${localProperties["JAMENDO_CLIENT_ID"]}\"")
     }
 
     // For Google/Firebase DEVELOPER_ERROR: ensure google-services.json is in app/ and add your
@@ -101,6 +109,10 @@ dependencies {
     implementation("com.google.dagger:hilt-android:2.51.1")
     ksp("com.google.dagger:hilt-android-compiler:2.51.1")
     implementation("androidx.fragment:fragment-ktx:1.6.2")
+
+    // Retrofit for Jamendo API
+    implementation("com.squareup.retrofit2:retrofit:2.11.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.11.0")
     debugImplementation("androidx.compose.ui:ui-tooling")
 
     testImplementation(libs.junit)
