@@ -492,7 +492,7 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     internal fun handleSongsLoaded(songs: List<Song>?) {
-        val list = (songs ?: emptyList()).filter { !it.audioUrl.isNullOrEmpty() }
+        val list = (songs ?: emptyList()).filter { !it.audioUrl.isNullOrEmpty() }.shuffled()
         if (list.isEmpty()) {
             playFromEssentials()
             return
