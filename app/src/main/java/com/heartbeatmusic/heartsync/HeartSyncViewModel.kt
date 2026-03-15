@@ -243,7 +243,7 @@ class HeartSyncViewModel @Inject constructor(
                         _displayArtist.value = md?.artist?.toString() ?: ""
                         _displayFirstTag.value = ""
                         _displayCoverColor.value = null
-                        if (player.isPlaying && sessionStartTime != null) {
+                        if (sessionStartTime != null) {
                             val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                             val title = md?.title?.toString() ?: ""
                             if (title.isNotEmpty()) sessionSongs.add(songId to title)
