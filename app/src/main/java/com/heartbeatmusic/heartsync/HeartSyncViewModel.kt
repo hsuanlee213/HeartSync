@@ -527,6 +527,7 @@ class HeartSyncViewModel @Inject constructor(
                 )
                 .build()
         }
+        player.shuffleModeEnabled = true
         player.setMediaItems(mediaItems)
         player.prepare()
         player.play()
