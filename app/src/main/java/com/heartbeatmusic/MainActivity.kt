@@ -60,6 +60,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
 
+        startService(Intent(this, PlayerService::class.java))
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContentView(R.layout.activity_main)
 

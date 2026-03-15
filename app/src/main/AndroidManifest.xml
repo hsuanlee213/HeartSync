@@ -4,6 +4,8 @@
     <!-- Required for streaming audio from the network during testing -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
 
     <!-- Required for Android 11+ to see Google Play Services (Firebase Auth, etc.) -->
     <queries>
@@ -65,6 +67,17 @@
         <activity
             android:name=".profile.EditProfileActivity"
             android:exported="false" />
+
+        <!-- Background playback service: provides MediaSession for lock screen,
+             notification controls, and headphone/Bluetooth media buttons -->
+        <service
+            android:name=".PlayerService"
+            android:exported="true"
+            android:foregroundServiceType="mediaPlayback">
+            <intent-filter>
+                <action android:name="androidx.media3.session.MediaSessionService" />
+            </intent-filter>
+        </service>
 
     </application>
 

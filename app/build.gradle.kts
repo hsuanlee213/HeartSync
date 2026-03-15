@@ -71,6 +71,7 @@ dependencies {
     implementation(libs.activity)
     implementation(libs.constraintlayout)
     implementation("androidx.media3:media3-exoplayer:1.8.0")
+    implementation("androidx.media3:media3-session:1.8.0")
     // RecyclerView for music list
     implementation("androidx.recyclerview:recyclerview:1.3.1")
 
