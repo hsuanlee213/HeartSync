@@ -378,22 +378,34 @@ class HeartSyncViewModel @Inject constructor(
 
     private fun initPlaybackState() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            _isMusicPlaying.value = player.isPlaying
-            val mediaItem = player.currentMediaItem
-            val md = mediaItem?.mediaMetadata
-            _currentTrackTitle.value = md?.title?.toString() ?: ""
-            _currentTrackArtist.value = md?.artist?.toString() ?: ""
-            _currentCoverUrl.value = md?.artworkUri?.toString()
-            _isPanelExpanded.value = mediaItem != null
-            _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
-            if (mediaItem != null) {
-                inferPlayingModeFromMediaId(mediaItem.mediaId)
-                _playbackSource.value = if (mediaItem.mediaId?.startsWith("essential_") == true) "Local" else "API"
-            } else {
-                _playbackSource.value = "Idle"
-            }
-            if (player.isPlaying) startProgressUpdates()
+            syncStateFromPlayer()
         }
+    }
+
+    /** Reads current player state into all relevant StateFlows. Must be called on Main thread. */
+    private fun syncStateFromPlayer(updateDisplay: Boolean = false) {
+        _isMusicPlaying.value = player.isPlaying
+        val mediaItem = player.currentMediaItem
+        val md = mediaItem?.mediaMetadata
+        _currentTrackTitle.value = md?.title?.toString() ?: ""
+        _currentTrackArtist.value = md?.artist?.toString() ?: ""
+        _currentCoverUrl.value = md?.artworkUri?.toString()
+        _isPanelExpanded.value = mediaItem != null
+        _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
+        if (mediaItem != null) {
+            inferPlayingModeFromMediaId(mediaItem.mediaId)
+            _playbackSource.value = if (mediaItem.mediaId?.startsWith("essential_") == true) "Local" else "API"
+            if (updateDisplay) {
+                _displayTitle.value = md?.title?.toString() ?: ""
+                _displayArtist.value = md?.artist?.toString() ?: ""
+                _displayFirstTag.value = ""
+                _displayCoverColor.value = null
+            }
+        } else {
+            _playingMode.value = null
+            _playbackSource.value = "Idle"
+        }
+        if (player.isPlaying) startProgressUpdates()
     }
 
     private fun startProgressUpdates() {
@@ -416,26 +428,7 @@ class HeartSyncViewModel @Inject constructor(
     /** Sync playback state from player (e.g. when UI becomes visible). */
     fun syncPlaybackState() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            _isMusicPlaying.value = player.isPlaying
-            val mediaItem = player.currentMediaItem
-            val md = mediaItem?.mediaMetadata
-            _currentTrackTitle.value = md?.title?.toString() ?: ""
-            _currentTrackArtist.value = md?.artist?.toString() ?: ""
-            _currentCoverUrl.value = md?.artworkUri?.toString()
-            _isPanelExpanded.value = mediaItem != null
-            _currentSongId.value = mediaItem?.mediaId?.takeIf { it.isNotEmpty() } ?: ""
-            if (mediaItem != null) {
-                inferPlayingModeFromMediaId(mediaItem.mediaId)
-                _playbackSource.value = if (mediaItem.mediaId?.startsWith("essential_") == true) "Local" else "API"
-                _displayTitle.value = md?.title?.toString() ?: ""
-                _displayArtist.value = md?.artist?.toString() ?: ""
-                _displayFirstTag.value = ""
-                _displayCoverColor.value = null
-            } else {
-                _playingMode.value = null
-                _playbackSource.value = "Idle"
-            }
-            if (player.isPlaying) startProgressUpdates()
+            syncStateFromPlayer(updateDisplay = true)
         }
     }
 
