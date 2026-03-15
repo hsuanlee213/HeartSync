@@ -21,7 +21,8 @@ data class SyncSessionEntity(
     val endTimestamp: Long,
     val durationMinutes: Int,
     val songIdsCsv: String = "[]",
-    val songTitlesCsv: String = "[]"
+    val songTitlesCsv: String = "[]",
+    val songArtistsCsv: String = "[]"
 ) {
     fun toSyncSession(): SyncSession = SyncSession(
         id = id,
@@ -31,7 +32,8 @@ data class SyncSessionEntity(
         endTimestamp = endTimestamp,
         durationMinutes = durationMinutes,
         songIds = jsonToList(songIdsCsv),
-        songTitles = jsonToList(songTitlesCsv)
+        songTitles = jsonToList(songTitlesCsv),
+        songArtists = jsonToList(songArtistsCsv)
     )
 }
 
@@ -43,7 +45,8 @@ fun SyncSession.toEntity(): SyncSessionEntity = SyncSessionEntity(
     endTimestamp = endTimestamp,
     durationMinutes = durationMinutes,
     songIdsCsv = listToJson(songIds),
-    songTitlesCsv = listToJson(songTitles)
+    songTitlesCsv = listToJson(songTitles),
+    songArtistsCsv = listToJson(songArtists)
 )
 
 private fun listToJson(list: List<String>): String =

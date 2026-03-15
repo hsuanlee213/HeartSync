@@ -435,7 +435,13 @@ private fun SessionCard(
     val durationSec = ((session.endTimestamp - session.startTimestamp) / 1_000).toInt().coerceAtLeast(0)
     val durationStr = if (durationSec >= 60) "${durationSec / 60}m" else "${durationSec}s"
     val songCount = session.songIds.size
-    val songs = session.songIds.zip(session.songTitles) { id, title -> id to title }
+    val songs = session.songIds.indices.map { i ->
+        Triple(
+            session.songIds[i],
+            session.songTitles.getOrElse(i) { "" },
+            session.songArtists.getOrElse(i) { "" }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -495,10 +501,11 @@ private fun SessionCard(
         if (isExpanded && songs.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                songs.forEach { (id, title) ->
+                songs.forEach { (id, title, artist) ->
                     SessionSongItem(
                         songId = id,
                         title = title,
+                        artist = artist,
                         mode = session.mode,
                         viewModel = viewModel
                     )
@@ -527,6 +534,7 @@ private val expandedButtonStyle = TextStyle(
 private fun SessionSongItem(
     songId: String,
     title: String,
+    artist: String,
     mode: String,
     viewModel: ArchiveViewModel
 ) {
@@ -554,7 +562,7 @@ private fun SessionSongItem(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {
-                        viewModel.addToCollection(songId, title, "", mode)
+                        viewModel.addToCollection(songId, title, artist, mode)
                     }
                 )
             )

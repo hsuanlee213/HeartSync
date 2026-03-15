@@ -165,7 +165,8 @@ class HeartSyncViewModel @Inject constructor(
 
     private var sessionStartTime: Long? = null
     private var sessionMode: TerminalMode? = null
-    private val sessionSongs = mutableListOf<Pair<String, String>>()
+    // Triple: (songId, title, artist)
+    private val sessionSongs = mutableListOf<Triple<String, String, String>>()
 
     // Dedicated scope for session saves — outlives viewModelScope so onCleared() saves complete
     private val sessionSaveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -205,8 +206,9 @@ class HeartSyncViewModel @Inject constructor(
                             if (mediaItem != null) {
                                 val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                                 val title = mediaItem.mediaMetadata.title?.toString() ?: ""
+                                val artist = mediaItem.mediaMetadata.artist?.toString() ?: ""
                                 if (title.isNotEmpty() && sessionSongs.none { it.first == songId }) {
-                                    sessionSongs.add(songId to title)
+                                    sessionSongs.add(Triple(songId, title, artist))
                                 }
                             }
                         }
@@ -253,8 +255,9 @@ class HeartSyncViewModel @Inject constructor(
                         if (sessionStartTime != null) {
                             val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                             val title = md?.title?.toString() ?: ""
+                            val artist = md?.artist?.toString() ?: ""
                             if (title.isNotEmpty() && sessionSongs.none { it.first == songId }) {
-                                sessionSongs.add(songId to title)
+                                sessionSongs.add(Triple(songId, title, artist))
                             }
                         }
                     }
@@ -407,7 +410,8 @@ class HeartSyncViewModel @Inject constructor(
             endTimestamp = endTime,
             durationMinutes = durationMinutes,
             songIds = songs.map { it.first },
-            songTitles = songs.map { it.second }
+            songTitles = songs.map { it.second },
+            songArtists = songs.map { it.third }
         )
         sessionSaveScope.launch { sessionRepository.saveSession(session) }
     }

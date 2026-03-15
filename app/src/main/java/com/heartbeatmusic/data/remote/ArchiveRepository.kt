@@ -27,7 +27,8 @@ class ArchiveRepository {
                     "endTimestamp" to session.endTimestamp,
                     "durationMinutes" to session.durationMinutes,
                     "songIds" to session.songIds,
-                    "songTitles" to session.songTitles
+                    "songTitles" to session.songTitles,
+                    "songArtists" to session.songArtists
                 )
             )
             .await()
@@ -50,7 +51,8 @@ class ArchiveRepository {
                 endTimestamp = (data["endTimestamp"] as? Number)?.toLong() ?: 0L,
                 durationMinutes = (data["durationMinutes"] as? Number)?.toInt() ?: 0,
                 songIds = (data["songIds"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                songTitles = (data["songTitles"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                songTitles = (data["songTitles"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                songArtists = (data["songArtists"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
             )
         }.sortedByDescending { it.endTimestamp }
     }.getOrElse { emptyList() }
@@ -78,7 +80,8 @@ class ArchiveRepository {
                         endTimestamp = (data["endTimestamp"] as? Number)?.toLong() ?: 0L,
                         durationMinutes = (data["durationMinutes"] as? Number)?.toInt() ?: 0,
                         songIds = (data["songIds"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
-                        songTitles = (data["songTitles"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
+                        songTitles = (data["songTitles"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList(),
+                        songArtists = (data["songArtists"] as? List<*>)?.mapNotNull { it as? String } ?: emptyList()
                     )
                 } ?: emptyList()
                 trySend(list.sortedByDescending { it.endTimestamp })
