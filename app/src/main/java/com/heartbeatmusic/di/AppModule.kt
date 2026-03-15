@@ -6,12 +6,16 @@ import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.local.EssentialAudioRepository
 import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
+import com.heartbeatmusic.data.remote.JamendoApiService
+import com.heartbeatmusic.data.remote.JamendoRepository
 import com.heartbeatmusic.data.remote.LibraryRepository
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import javax.inject.Singleton
 
 @Module
@@ -51,4 +55,18 @@ object AppModule {
     fun provideEssentialAudioRepository(
         @ApplicationContext context: Context
     ): EssentialAudioRepository = EssentialAudioRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideJamendoApiService(): JamendoApiService =
+        Retrofit.Builder()
+            .baseUrl("https://api.jamendo.com/v3.0/")
+            .addConverterFactory(GsonConverterFactory.create())
+            .build()
+            .create(JamendoApiService::class.java)
+
+    @Provides
+    @Singleton
+    fun provideJamendoRepository(api: JamendoApiService): JamendoRepository =
+        JamendoRepository(api)
 }
