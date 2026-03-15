@@ -391,7 +391,7 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     /** Saves current session snapshot without ending it. Safe to call repeatedly (upserts by id). */
-    private fun autoSaveSession() {
+    fun autoSaveSession() {
         val start = sessionStartTime ?: return
         val mode = sessionMode ?: return
         val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
