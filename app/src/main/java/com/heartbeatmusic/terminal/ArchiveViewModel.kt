@@ -7,6 +7,7 @@ import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.local.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +23,7 @@ class ArchiveViewModel @Inject constructor(
     private val sessionRepository: SessionRepository
 ) : ViewModel() {
 
-    private val pendingDeletion = mutableSetOf<String>()
+    private val pendingDeletion: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     private val _sessions = MutableStateFlow<List<SyncSession>>(emptyList())
     val sessions: StateFlow<List<SyncSession>> = _sessions.asStateFlow()
