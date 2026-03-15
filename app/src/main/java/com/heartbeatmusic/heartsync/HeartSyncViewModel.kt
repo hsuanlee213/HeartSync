@@ -20,6 +20,7 @@ import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.local.EssentialAudioRepository
 import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
+import com.heartbeatmusic.data.remote.JamendoRepository
 import com.heartbeatmusic.terminal.TerminalMode
 import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,35 +60,6 @@ sealed class PlaybackTransition {
     object Idle : PlaybackTransition()
 }
 
-/** Mock song for testing per AppMode. */
-data class MockSong(
-    val title: String,
-    val artist: String,
-    val firstTag: String,
-    val coverColor: Color
-)
-
-/** Mock song database per AppMode. */
-private val MOCK_SONGS: Map<TerminalMode, MockSong> = mapOf(
-    TerminalMode.ZEN to MockSong(
-        title = "Deep Meditation (Mock)",
-        artist = "Zen Master",
-        firstTag = "#Ambient",
-        coverColor = Color(0xFF4A148C)
-    ),
-    TerminalMode.SYNC to MockSong(
-        title = "Digital Flow (Mock)",
-        artist = "Sync Project",
-        firstTag = "#DeepHouse",
-        coverColor = Color(0xFF00FFFF)
-    ),
-    TerminalMode.OVERDRIVE to MockSong(
-        title = "System Overload (Mock)",
-        artist = "Kinetic Band",
-        firstTag = "#Techno",
-        coverColor = Color(0xFFFF4500)
-    )
-)
 
 /**
  * HeartSync ViewModel.
@@ -96,6 +68,7 @@ private val MOCK_SONGS: Map<TerminalMode, MockSong> = mapOf(
 @HiltViewModel
 class HeartSyncViewModel @Inject constructor(
     application: Application,
+    private val jamendoRepository: JamendoRepository,
     private val libraryRepository: LibraryRepository,
     private val archiveRepository: ArchiveRepository,
     private val essentialAudioRepository: EssentialAudioRepository,
@@ -500,32 +473,17 @@ class HeartSyncViewModel @Inject constructor(
             if (heartRateProvider is MockHeartRateProvider) {
                 heartRateProvider.setMode(mode)
             }
-            MOCK_SONGS[mode]?.let { mock ->
-                _displayTitle.value = mock.title
-                _displayArtist.value = mock.artist
-                _displayFirstTag.value = mock.firstTag
-                _displayCoverColor.value = mock.coverColor
-            }
             Log.i(TAG, "Mode Changed: $mode, Fetching Tags: ${mode.musicTags}, Target BPM: ${_currentHeartRate.value}")
             _isPanelExpanded.value = true
 
             if (isNetworkAvailable()) {
-                Log.d(TAG, "HeartSync_Debug: Attempting API fetch...")
-                libraryRepository.getAllSongs(
-                    object : LibraryRepository.SongsCallback {
-                        override fun onSuccess(songs: List<Song>?) {
-                            viewModelScope.launch(Dispatchers.Main.immediate) {
-                                vm.handleSongsLoaded(songs)
-                            }
-                        }
-                        override fun onError(e: Exception?) {
-                            Log.d(TAG, "HeartSync_Debug: Network down, switching to Assets path.")
-                            viewModelScope.launch(Dispatchers.Main.immediate) {
-                                vm.playLocalAsset()
-                            }
-                        }
+                Log.d(TAG, "HeartSync_Debug: Attempting Jamendo API fetch for mode=$mode...")
+                runCatching { jamendoRepository.fetchTracksForMode(mode) }
+                    .onSuccess { handleSongsLoaded(it) }
+                    .onFailure {
+                        Log.d(TAG, "HeartSync_Debug: Jamendo fetch failed, switching to Assets path.")
+                        playLocalAsset()
                     }
-                )
             } else {
                 Log.d(TAG, "HeartSync_Debug: Network down, switching to Assets path.")
                 vm.playLocalAsset()
@@ -534,14 +492,12 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     internal fun handleSongsLoaded(songs: List<Song>?) {
-        val list = songs ?: emptyList()
-        val song = list.firstOrNull()
-        val url = song?.audioUrl?.takeIf { it.isNotEmpty() }
-        if (url != null && song != null) {
-            playFromApi(song, url)
-        } else {
+        val list = (songs ?: emptyList()).filter { !it.audioUrl.isNullOrEmpty() }
+        if (list.isEmpty()) {
             playFromEssentials()
+            return
         }
+        playFromApi(list)
     }
 
     /** Play essential audio from local cache (Firebase Storage). */
@@ -550,33 +506,38 @@ class HeartSyncViewModel @Inject constructor(
         playFromEssentials()
     }
 
-    internal fun playFromApi(song: Song, url: String) {
+    internal fun playFromApi(songs: List<Song>) {
         val mode = _currentMode.value
         _playingMode.value = mode
         _playbackSource.value = "API"
 
-        val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
-        val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
-        val coverUrl = song.coverUrl
-        val songId = song.id?.takeIf { it.isNotEmpty() } ?: ""
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(songId)
-            .setUri(Uri.parse(url))
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
-                    .setArtworkUri(coverUrl?.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) })
-                    .build()
-            )
-            .build()
-        player.setMediaItem(mediaItem)
+        val mediaItems = songs.map { song ->
+            val title = song.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
+            val artist = song.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
+            val songId = song.id?.takeIf { it.isNotEmpty() } ?: ""
+            MediaItem.Builder()
+                .setMediaId(songId)
+                .setUri(Uri.parse(song.audioUrl!!))
+                .setMediaMetadata(
+                    MediaMetadata.Builder()
+                        .setTitle(title)
+                        .setArtist(artist)
+                        .setArtworkUri(song.coverUrl?.takeIf { it.isNotEmpty() }?.let { Uri.parse(it) })
+                        .build()
+                )
+                .build()
+        }
+        player.setMediaItems(mediaItems)
         player.prepare()
         player.play()
+
+        val first = songs.first()
+        val firstTitle = first.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
+        val firstArtist = first.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
         _isPanelExpanded.value = true
-        _currentSongId.value = songId
-        _displayTitle.value = title
-        _displayArtist.value = artist
+        _currentSongId.value = first.id?.takeIf { it.isNotEmpty() } ?: ""
+        _displayTitle.value = firstTitle
+        _displayArtist.value = firstArtist
         _displayFirstTag.value = ""
         _displayCoverColor.value = null
     }
@@ -709,18 +670,17 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     /**
-     * Switch Terminal mode. Updates display to mock song and logs.
+     * Switch Terminal mode.
+     * If music is active, immediately fetches and loads tracks for the new mode.
      */
     fun setTerminalMode(mode: TerminalMode) {
         setMode(mode)
-        val mock = MOCK_SONGS[mode] ?: return
-        _displayTitle.value = mock.title
-        _displayArtist.value = mock.artist
-        _displayFirstTag.value = mock.firstTag
-        _displayCoverColor.value = mock.coverColor
         val tags = mode.musicTags
         val bpm = _currentHeartRate.value
         Log.i(TAG, "Mode Changed: $mode, Fetching Tags: $tags, Target BPM: $bpm")
+        if (player.currentMediaItem != null) {
+            loadAndPlayFirstSong()
+        }
     }
 
     override fun onCleared() {
