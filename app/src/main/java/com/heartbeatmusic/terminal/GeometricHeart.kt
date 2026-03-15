@@ -104,7 +104,7 @@ fun GeometricHeartContent(
     val isMusicPlaying by viewModel.isMusicPlaying.collectAsStateWithLifecycle()
     val isPlayingInCurrentMode by viewModel.isPlayingInCurrentMode.collectAsStateWithLifecycle()
     val isPanelExpanded by viewModel.isPanelExpanded.collectAsStateWithLifecycle()
-    val mode by TerminalModeHolder.selectedMode.collectAsStateWithLifecycle()
+    val mode by viewModel.currentMode.collectAsStateWithLifecycle()
     val currentCoverUrl by viewModel.currentCoverUrl.collectAsStateWithLifecycle()
     val displayTitle by viewModel.displayTitle.collectAsStateWithLifecycle()
     val displayArtist by viewModel.displayArtist.collectAsStateWithLifecycle()

@@ -21,7 +21,6 @@ import com.heartbeatmusic.data.local.EssentialAudioRepository
 import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.terminal.TerminalMode
-import com.heartbeatmusic.terminal.TerminalModeHolder
 import com.heartbeatmusic.data.remote.LibraryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -104,13 +103,13 @@ class HeartSyncViewModel @Inject constructor(
     private val sessionRepository: SessionRepository
 ) : AndroidViewModel(application) {
 
-    private val heartRateProvider = MockHeartRateProvider(viewModelScope, TerminalMode.SYNC)
+    private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
+    val currentMode: StateFlow<TerminalMode> = _currentMode.asStateFlow()
+
+    private val heartRateProvider = MockHeartRateProvider(viewModelScope, _currentMode.value)
 
     private val _currentHeartRate = MutableStateFlow(0)
     val currentHeartRate: StateFlow<Int> = _currentHeartRate.asStateFlow()
-
-    private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
-    val currentMode: StateFlow<TerminalMode> = _currentMode.asStateFlow()
 
     private val _isMusicPlaying = MutableStateFlow(false)
     val isMusicPlaying: StateFlow<Boolean> = _isMusicPlaying.asStateFlow()
@@ -129,7 +128,7 @@ class HeartSyncViewModel @Inject constructor(
     val isPlayingInCurrentMode: StateFlow<Boolean> = combine(
         _isMusicPlaying,
         _playingMode,
-        TerminalModeHolder.selectedMode
+        _currentMode
     ) { playing, pm, current ->
         playing && pm == current
     }.stateIn(
@@ -177,7 +176,7 @@ class HeartSyncViewModel @Inject constructor(
     val isCurrentSongInCollection: StateFlow<Boolean> = combine(
         _currentSongId,
         _collection,
-        TerminalModeHolder.selectedMode
+        _currentMode
     ) { songId, items, mode ->
         songId.isNotEmpty() && items.any { it.songId == songId && it.mode == mode.name }
     }.stateIn(
@@ -223,7 +222,7 @@ class HeartSyncViewModel @Inject constructor(
                     if (isPlaying) {
                         if (sessionStartTime == null) {
                             sessionStartTime = System.currentTimeMillis()
-                            sessionMode = TerminalModeHolder.getCurrentMode()
+                            sessionMode = _currentMode.value
                             val mediaItem = player.currentMediaItem
                             if (mediaItem != null) {
                                 val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
@@ -308,7 +307,7 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     private fun doPlayEssentials() {
-        val mode = TerminalModeHolder.getCurrentMode()
+        val mode = _currentMode.value
         _playingMode.value = mode
         _isPanelExpanded.value = true
         _playbackSource.value = "Local"
@@ -467,7 +466,7 @@ class HeartSyncViewModel @Inject constructor(
     /** Play or pause. Option A: switching mode keeps playing until user presses Play in new mode. */
     fun playPause() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            val currentMode = TerminalModeHolder.getCurrentMode()
+            val currentMode = _currentMode.value
             val playingModeNow = _playingMode.value
             val isThisModePlaying = player.isPlaying && playingModeNow == currentMode
 
@@ -498,7 +497,7 @@ class HeartSyncViewModel @Inject constructor(
     private fun loadAndPlayFirstSong() {
         val vm = this
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            val mode = TerminalModeHolder.getCurrentMode()
+            val mode = _currentMode.value
             Log.d(TAG, "HeartSync_Audio: Playing: $mode, stopping previous tracks...")
             player.stop()
             player.clearMediaItems()
@@ -559,7 +558,7 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     internal fun playFromApi(song: Song, url: String) {
-        val mode = TerminalModeHolder.getCurrentMode()
+        val mode = _currentMode.value
         _playingMode.value = mode
         _playbackSource.value = "API"
 
@@ -689,7 +688,7 @@ class HeartSyncViewModel @Inject constructor(
     /** Toggle current track in Collection: add if not in, remove if in. Syncs with Archive tab. */
     fun toggleCollection() {
         // Capture mode on Main thread at click time (not hardcoded) - ensures ZEN/SYNC/OVERDRIVE all work
-        val currentMode = TerminalModeHolder.getCurrentMode().name.ifEmpty { "SYNC" }
+        val currentMode = _currentMode.value.name
         Log.d(TAG, "HeartSync_Debug: toggleCollection mode=$currentMode songId=${_currentSongId.value}")
 
         viewModelScope.launch(Dispatchers.IO) {

@@ -35,7 +35,7 @@ class TerminalFragment : Fragment() {
 
     private fun setupModeSwitcher(view: View) {
         val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.mode_switcher_root)
-        val checkedId = when (TerminalModeHolder.getCurrentMode()) {
+        val checkedId = when (viewModel.currentMode.value) {
             TerminalMode.ZEN -> R.id.btn_mode_zen
             TerminalMode.SYNC -> R.id.btn_mode_sync
             TerminalMode.OVERDRIVE -> R.id.btn_mode_overdrive
@@ -44,9 +44,9 @@ class TerminalFragment : Fragment() {
         toggleGroup.addOnButtonCheckedListener { _, id, isChecked ->
             if (!isChecked) return@addOnButtonCheckedListener
             when (id) {
-                R.id.btn_mode_zen -> TerminalModeHolder.setMode(TerminalMode.ZEN)
-                R.id.btn_mode_sync -> TerminalModeHolder.setMode(TerminalMode.SYNC)
-                R.id.btn_mode_overdrive -> TerminalModeHolder.setMode(TerminalMode.OVERDRIVE)
+                R.id.btn_mode_zen -> viewModel.setMode(TerminalMode.ZEN)
+                R.id.btn_mode_sync -> viewModel.setMode(TerminalMode.SYNC)
+                R.id.btn_mode_overdrive -> viewModel.setMode(TerminalMode.OVERDRIVE)
             }
         }
     }
