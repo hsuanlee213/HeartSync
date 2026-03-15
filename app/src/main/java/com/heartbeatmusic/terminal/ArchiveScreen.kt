@@ -307,14 +307,11 @@ private fun SessionsContent(
 }
 
 @Composable
-private fun SessionListItemWithReveal(
-    session: SyncSession,
-    isExpanded: Boolean,
-    onToggleExpand: () -> Unit,
+private fun SwipeToRevealContainer(
     isDeleting: Boolean,
     onTrashClick: () -> Unit,
-    viewModel: ArchiveViewModel,
-    density: androidx.compose.ui.unit.Density
+    density: androidx.compose.ui.unit.Density,
+    content: @Composable () -> Unit
 ) {
     val offsetPx = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
@@ -322,9 +319,7 @@ private fun SessionListItemWithReveal(
     val thresholdPx = with(density) { SnapThreshold.toPx() }
 
     LaunchedEffect(isDeleting) {
-        if (isDeleting) {
-            offsetPx.snapTo(0f)
-        }
+        if (isDeleting) offsetPx.snapTo(0f)
     }
 
     Box(
@@ -380,8 +375,7 @@ private fun SessionListItemWithReveal(
                         detectHorizontalDragGestures(
                             onDragEnd = {
                                 scope.launch {
-                                    val current = offsetPx.value
-                                    val target = if (current < -thresholdPx) -maxOffsetPx else 0f
+                                    val target = if (offsetPx.value < -thresholdPx) -maxOffsetPx else 0f
                                     offsetPx.animateTo(
                                         targetValue = target,
                                         animationSpec = spring(
@@ -393,22 +387,32 @@ private fun SessionListItemWithReveal(
                             },
                             onHorizontalDrag = { _, dragAmount ->
                                 scope.launch {
-                                    val newOffset = (offsetPx.value + dragAmount)
-                                        .coerceIn(-maxOffsetPx, 0f)
-                                    offsetPx.snapTo(newOffset)
+                                    offsetPx.snapTo(
+                                        (offsetPx.value + dragAmount).coerceIn(-maxOffsetPx, 0f)
+                                    )
                                 }
                             }
                         )
                     }
             ) {
-                SessionCard(
-                    session = session,
-                    isExpanded = isExpanded,
-                    onToggleExpand = onToggleExpand,
-                    viewModel = viewModel
-                )
+                content()
             }
         }
+    }
+}
+
+@Composable
+private fun SessionListItemWithReveal(
+    session: SyncSession,
+    isExpanded: Boolean,
+    onToggleExpand: () -> Unit,
+    isDeleting: Boolean,
+    onTrashClick: () -> Unit,
+    viewModel: ArchiveViewModel,
+    density: androidx.compose.ui.unit.Density
+) {
+    SwipeToRevealContainer(isDeleting, onTrashClick, density) {
+        SessionCard(session = session, isExpanded = isExpanded, onToggleExpand = onToggleExpand, viewModel = viewModel)
     }
 }
 
@@ -621,96 +625,8 @@ private fun CollectionListItemWithReveal(
     onTrashClick: () -> Unit,
     density: androidx.compose.ui.unit.Density
 ) {
-    val offsetPx = remember { Animatable(0f) }
-    val scope = rememberCoroutineScope()
-    val maxOffsetPx = with(density) { TrashRevealWidth.toPx() }
-    val thresholdPx = with(density) { SnapThreshold.toPx() }
-
-    LaunchedEffect(isDeleting) {
-        if (isDeleting) {
-            offsetPx.snapTo(0f)
-        }
-    }
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(animationSpec = tween(350))
-            .heightIn(min = if (isDeleting) 0.dp else 1.dp)
-    ) {
-        if (isDeleting) return@Box
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-        ) {
-        // Background layer: trash button fixed on the right, hidden until card slides away
-        Box(
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .width(TrashRevealWidth)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
-                .background(SwipeDeleteBg)
-                .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(topEnd = 12.dp, bottomEnd = 12.dp))
-                .clickable(onClick = onTrashClick),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Delete,
-                contentDescription = "Remove from collection",
-                tint = Color.White
-            )
-        }
-
-        // Foreground layer: glassmorphism card, slides left on swipe to reveal trash
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .offset { IntOffset(offsetPx.value.toInt(), 0) }
-                .clickable(
-                    enabled = offsetPx.value != 0f,
-                    onClick = {
-                        scope.launch {
-                            offsetPx.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    dampingRatio = Spring.DampingRatioMediumBouncy,
-                                    stiffness = Spring.StiffnessLow
-                                )
-                            )
-                        }
-                    }
-                )
-                .pointerInput(Unit) {
-                    detectHorizontalDragGestures(
-                        onDragEnd = {
-                            scope.launch {
-                                val current = offsetPx.value
-                                val target = if (current < -thresholdPx) -maxOffsetPx else 0f
-                                offsetPx.animateTo(
-                                    targetValue = target,
-                                    animationSpec = spring(
-                                        dampingRatio = Spring.DampingRatioMediumBouncy,
-                                        stiffness = Spring.StiffnessLow
-                                    )
-                                )
-                            }
-                        },
-                        onHorizontalDrag = { _, dragAmount ->
-                            scope.launch {
-                                val newOffset = (offsetPx.value + dragAmount)
-                                    .coerceIn(-maxOffsetPx, 0f)
-                                offsetPx.snapTo(newOffset)
-                            }
-                        }
-                    )
-                }
-        ) {
-            CollectionCard(item = item, onClick = { /* TODO: play or show detail */ })
-        }
-        }
+    SwipeToRevealContainer(isDeleting, onTrashClick, density) {
+        CollectionCard(item = item, onClick = { /* TODO: play or show detail */ })
     }
 }
 
