@@ -200,7 +200,9 @@ class HeartSyncViewModel @Inject constructor(
                             if (mediaItem != null) {
                                 val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                                 val title = mediaItem.mediaMetadata.title?.toString() ?: ""
-                                if (title.isNotEmpty()) sessionSongs.add(songId to title)
+                                if (title.isNotEmpty() && sessionSongs.none { it.first == songId }) {
+                                    sessionSongs.add(songId to title)
+                                }
                             }
                         }
                         startProgressUpdates()
@@ -246,7 +248,9 @@ class HeartSyncViewModel @Inject constructor(
                         if (sessionStartTime != null) {
                             val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                             val title = md?.title?.toString() ?: ""
-                            if (title.isNotEmpty()) sessionSongs.add(songId to title)
+                            if (title.isNotEmpty() && sessionSongs.none { it.first == songId }) {
+                                sessionSongs.add(songId to title)
+                            }
                         }
                     }
                 }
