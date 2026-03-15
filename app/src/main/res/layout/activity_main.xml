@@ -36,30 +36,15 @@
             tools:text="JD" />
     </com.google.android.material.appbar.MaterialToolbar>
 
-    <!-- Fragment container (Terminal / Archive / Settings) - MusicPlayerPanel is inside Terminal fragment -->
+    <!-- Fragment container (Terminal / Archive / Goals) -->
     <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="0dp"
         android:layout_height="0dp"
         app:layout_constraintTop_toBottomOf="@id/toolbar"
-        app:layout_constraintBottom_toTopOf="@id/mode_switcher_wrapper"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <!-- Mode switcher (ZEN, SYNC, OVERDRIVE) - above bottom nav -->
-    <FrameLayout
-        android:id="@+id/mode_switcher_wrapper"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
         app:layout_constraintBottom_toTopOf="@id/bottom_nav"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintEnd_toEndOf="parent">
-
-        <include
-            layout="@layout/mode_switcher"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content" />
-    </FrameLayout>
+        app:layout_constraintEnd_toEndOf="parent" />
 
     <!-- BottomNavigationView -->
     <com.google.android.material.bottomnavigation.BottomNavigationView

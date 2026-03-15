@@ -10,6 +10,8 @@
 .DS_Store
 .cursor/
 .claude/
+.kotlin/
+.vscode/
 docs/PRD.md
 /build
 /captures

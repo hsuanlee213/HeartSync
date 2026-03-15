@@ -7,6 +7,7 @@ import android.view.ViewGroup
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import com.google.android.material.button.MaterialButtonToggleGroup
 import com.heartbeatmusic.R
 import com.heartbeatmusic.heartsync.HeartSyncViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -26,8 +27,27 @@ class TerminalFragment : Fragment() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        (view.findViewById<ComposeView>(R.id.heart_animation_container))?.setContent {
+        setupModeSwitcher(view)
+        view.findViewById<ComposeView>(R.id.heart_animation_container)?.setContent {
             GeometricHeartContent(viewModel = viewModel)
+        }
+    }
+
+    private fun setupModeSwitcher(view: View) {
+        val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.mode_switcher_root)
+        val checkedId = when (TerminalModeHolder.getCurrentMode()) {
+            TerminalMode.ZEN -> R.id.btn_mode_zen
+            TerminalMode.SYNC -> R.id.btn_mode_sync
+            TerminalMode.OVERDRIVE -> R.id.btn_mode_overdrive
+        }
+        toggleGroup.check(checkedId)
+        toggleGroup.addOnButtonCheckedListener { _, id, isChecked ->
+            if (!isChecked) return@addOnButtonCheckedListener
+            when (id) {
+                R.id.btn_mode_zen -> TerminalModeHolder.setMode(TerminalMode.ZEN)
+                R.id.btn_mode_sync -> TerminalModeHolder.setMode(TerminalMode.SYNC)
+                R.id.btn_mode_overdrive -> TerminalModeHolder.setMode(TerminalMode.OVERDRIVE)
+            }
         }
     }
 }

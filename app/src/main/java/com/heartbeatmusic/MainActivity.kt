@@ -16,14 +16,11 @@ import androidx.fragment.app.FragmentTransaction
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import com.google.android.material.bottomnavigation.BottomNavigationView
-import com.google.android.material.button.MaterialButtonToggleGroup
 import com.heartbeatmusic.biometric.BioProfileStorage
 import com.heartbeatmusic.biometric.BiometricFilter
 import com.heartbeatmusic.terminal.ArchiveFragment
 import com.heartbeatmusic.terminal.SyncEngineFragment
 import com.heartbeatmusic.terminal.TerminalFragment
-import com.heartbeatmusic.terminal.TerminalMode
-import com.heartbeatmusic.terminal.TerminalModeHolder
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -75,7 +72,6 @@ class MainActivity : AppCompatActivity() {
 
         setupProfileButton()
         setupBottomNav()
-        setupModeSwitcher()
 
         if (savedInstanceState == null) showFragment(TAG_TERMINAL)
 
@@ -127,29 +123,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun setupModeSwitcher() {
-        val toggleGroup = findViewById<MaterialButtonToggleGroup>(R.id.mode_switcher_root)
-        updateModeButtonStyles(TerminalModeHolder.getCurrentMode())
-        toggleGroup.addOnButtonCheckedListener { _, checkedId, isChecked ->
-            if (!isChecked) return@addOnButtonCheckedListener
-            when (checkedId) {
-                R.id.btn_mode_zen -> TerminalModeHolder.setMode(TerminalMode.ZEN)
-                R.id.btn_mode_sync -> TerminalModeHolder.setMode(TerminalMode.SYNC)
-                R.id.btn_mode_overdrive -> TerminalModeHolder.setMode(TerminalMode.OVERDRIVE)
-            }
-        }
-    }
-
-    private fun updateModeButtonStyles(mode: TerminalMode) {
-        val toggleGroup = findViewById<MaterialButtonToggleGroup>(R.id.mode_switcher_root)
-        val checkedId = when (mode) {
-            TerminalMode.ZEN -> R.id.btn_mode_zen
-            TerminalMode.SYNC -> R.id.btn_mode_sync
-            TerminalMode.OVERDRIVE -> R.id.btn_mode_overdrive
-        }
-        toggleGroup.check(checkedId)
-    }
-
     private fun showFragment(tag: String) {
         val fragment = supportFragmentManager.findFragmentByTag(tag) ?: createFragmentForTag(tag)
         supportFragmentManager.beginTransaction()
@@ -179,7 +152,6 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         tvUsername.text = getInitials(prefs.getString("username", "U") ?: "U")
-        updateModeButtonStyles(TerminalModeHolder.getCurrentMode())
     }
 
     companion object {
