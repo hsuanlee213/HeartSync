@@ -264,7 +264,6 @@ private fun SessionsContent(
             deletingSessionIds = deletingSessionIds + session.id
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             delay(350)
-            val sessionToRestore = session
             viewModel.removeSessionFromUI(session.id)
             deletingSessionIds = deletingSessionIds - session.id
             // Persist delete immediately so state stays consistent across tabs and restarts.
@@ -276,8 +275,8 @@ private fun SessionsContent(
             )
             when (result) {
                 SnackbarResult.ActionPerformed -> {
-                    viewModel.restoreSession(sessionToRestore)
-                    viewModel.saveSession(sessionToRestore)
+                    viewModel.restoreSession(session)
+                    viewModel.saveSession(session)
                 }
                 SnackbarResult.Dismissed -> { /* already deleted above */ }
             }
@@ -578,7 +577,6 @@ private fun CollectionContent(
             deletingCollectionIds = deletingCollectionIds + item.id
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             delay(350)
-            val itemToRestore = item
             deletingCollectionIds = deletingCollectionIds - item.id
             viewModel.removeFromCollection(item.songId, item.mode)
             val result = snackbarHostState.showSnackbar(
@@ -589,11 +587,11 @@ private fun CollectionContent(
             when (result) {
                 SnackbarResult.ActionPerformed -> {
                     viewModel.addToCollection(
-                        itemToRestore.songId,
-                        itemToRestore.title,
-                        itemToRestore.artist,
-                        itemToRestore.mode,
-                        itemToRestore.coverUrl
+                        item.songId,
+                        item.title,
+                        item.artist,
+                        item.mode,
+                        item.coverUrl
                     )
                 }
                 SnackbarResult.Dismissed -> { }
