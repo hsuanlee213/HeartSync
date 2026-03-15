@@ -32,7 +32,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -164,6 +166,9 @@ class HeartSyncViewModel @Inject constructor(
     private var sessionStartTime: Long? = null
     private var sessionMode: TerminalMode? = null
     private val sessionSongs = mutableListOf<Pair<String, String>>()
+
+    // Dedicated scope for session saves — outlives viewModelScope so onCleared() saves complete
+    private val sessionSaveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     init {
         collectHeartRate()
@@ -385,13 +390,41 @@ class HeartSyncViewModel @Inject constructor(
         if (player.isPlaying) startProgressUpdates()
     }
 
+    /** Saves current session snapshot without ending it. Safe to call repeatedly (upserts by id). */
+    private fun autoSaveSession() {
+        val start = sessionStartTime ?: return
+        val mode = sessionMode ?: return
+        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val songs = sessionSongs.toList()
+        if (songs.isEmpty()) return
+        val endTime = System.currentTimeMillis()
+        val durationMinutes = ((endTime - start) / 60_000).toInt().coerceAtLeast(0)
+        val session = SyncSession(
+            id = "session_${start}",
+            userId = uid,
+            mode = mode.name,
+            startTimestamp = start,
+            endTimestamp = endTime,
+            durationMinutes = durationMinutes,
+            songIds = songs.map { it.first },
+            songTitles = songs.map { it.second }
+        )
+        sessionSaveScope.launch { sessionRepository.saveSession(session) }
+    }
+
     private fun startProgressUpdates() {
         progressJob?.cancel()
         progressJob = viewModelScope.launch {
+            var autoSaveTick = 0
             while (isActive) {
                 val dur = player.duration
                 val pos = player.currentPosition
                 _playbackProgress.value = if (dur > 0) (pos.toFloat() / dur).coerceIn(0f, 1f) else 0f
+                autoSaveTick++
+                if (autoSaveTick >= 100) { // 100 × 300ms = 30s
+                    autoSaveSession()
+                    autoSaveTick = 0
+                }
                 delay(300)
             }
         }
@@ -555,9 +588,7 @@ class HeartSyncViewModel @Inject constructor(
     /** Stop playback and clear media. Collapses the panel. Saves session if one was active. */
     fun stop() {
         viewModelScope.launch(Dispatchers.Main.immediate) {
-            val start = sessionStartTime
-            val mode = sessionMode
-            val songs = sessionSongs.toList()
+            autoSaveSession()
             sessionStartTime = null
             sessionMode = null
             sessionSongs.clear()
@@ -580,26 +611,7 @@ class HeartSyncViewModel @Inject constructor(
             _playbackProgress.value = 0f
             stopProgressUpdates()
 
-            if (start != null && mode != null) {
-                val uid = FirebaseAuth.getInstance().currentUser?.uid
-                if (uid != null) {
-                    val endTime = System.currentTimeMillis()
-                    val durationMinutes = ((endTime - start) / 60_000).toInt().coerceAtLeast(0)
-                    val session = SyncSession(
-                        id = "session_${start}",
-                        userId = uid,
-                        mode = mode.name,
-                        startTimestamp = start,
-                        endTimestamp = endTime,
-                        durationMinutes = durationMinutes,
-                        songIds = songs.map { it.first },
-                        songTitles = songs.map { it.second }
-                    )
-                    viewModelScope.launch {
-                        sessionRepository.saveSession(session)
-                    }
-                }
-            }
+            autoSaveSession()
         }
     }
 
@@ -689,7 +701,8 @@ class HeartSyncViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
+        autoSaveSession()
         heartRateProvider.stopMonitoring()
+        super.onCleared()
     }
 }
