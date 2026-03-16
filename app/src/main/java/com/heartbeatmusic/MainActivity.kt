@@ -19,7 +19,7 @@ import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.heartbeatmusic.biometric.BioProfileStorage
 import com.heartbeatmusic.biometric.BiometricFilter
 import com.heartbeatmusic.terminal.ArchiveFragment
-import com.heartbeatmusic.terminal.SyncEngineFragment
+import com.heartbeatmusic.terminal.GoalsFragment
 import com.heartbeatmusic.terminal.TerminalFragment
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -144,7 +144,7 @@ class MainActivity : AppCompatActivity() {
     private fun createFragmentForTag(tag: String): Fragment = when (tag) {
         TAG_TERMINAL -> TerminalFragment()
         TAG_ARCHIVE -> ArchiveFragment()
-        TAG_SYNC_ENGINE -> SyncEngineFragment()
+        TAG_SYNC_ENGINE -> GoalsFragment()
         else -> TerminalFragment()
     }
 
