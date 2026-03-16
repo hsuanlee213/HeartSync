@@ -17,6 +17,7 @@ import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.model.Song
 import com.heartbeatmusic.data.model.SyncSession
 import com.heartbeatmusic.data.local.CollectionRepository
+import com.heartbeatmusic.data.local.DailyGoalRepository
 import com.heartbeatmusic.data.local.EssentialAudioRepository
 import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
@@ -44,6 +45,8 @@ import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import java.net.SocketTimeoutException
 import java.net.UnknownHostException
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 private const val TAG = "HeartSync"
 
@@ -78,7 +81,8 @@ class HeartSyncViewModel @Inject constructor(
     private val archiveRepository: ArchiveRepository,
     private val essentialAudioRepository: EssentialAudioRepository,
     private val collectionRepository: CollectionRepository,
-    private val sessionRepository: SessionRepository
+    private val sessionRepository: SessionRepository,
+    private val dailyGoalRepository: DailyGoalRepository
 ) : AndroidViewModel(application) {
 
     private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
