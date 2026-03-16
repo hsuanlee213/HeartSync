@@ -190,6 +190,9 @@ class HeartSyncViewModel @Inject constructor(
         collectionRepository.collectionFlow()
             .onEach { _collection.value = it }
             .launchIn(viewModelScope)
+        viewModelScope.launch(Dispatchers.IO) {
+            recordAchievementForLastMonth(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))
+        }
     }
 
     private fun observePlaybackState() {

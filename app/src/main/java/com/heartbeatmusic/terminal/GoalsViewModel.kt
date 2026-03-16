@@ -45,7 +45,29 @@ class GoalsViewModel @Inject constructor(
             .launchIn(viewModelScope)
         viewModelScope.launch(Dispatchers.IO) {
             generateTodayGoalsIfNeeded(today)
+            ensureLastMonthAchievementRecorded(today)
         }
+    }
+
+    /**
+     * Step 6: On app launch, check if last month's achievement has been recorded.
+     * Count completed/total goals for the previous month and insert or update AchievementEntity.
+     */
+    private suspend fun ensureLastMonthAchievementRecorded(today: String) {
+        val lastMonth = LocalDate.parse(today).minusMonths(1)
+        val yearMonth = "${lastMonth.year}-${lastMonth.monthValue.toString().padStart(2, '0')}"
+        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth)
+        if (goals.isEmpty()) return
+        val completed = goals.count { it.isCompleted }
+        achievementRepository.insertAchievement(
+            Achievement(
+                id = yearMonth,
+                year = lastMonth.year,
+                month = lastMonth.monthValue,
+                completedCount = completed,
+                totalCount = goals.size
+            )
+        )
     }
 
     private suspend fun generateTodayGoalsIfNeeded(today: String) {
