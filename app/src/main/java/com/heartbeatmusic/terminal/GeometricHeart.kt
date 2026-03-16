@@ -143,9 +143,9 @@ fun GeometricHeartContent(
     val zenEasing = LinearOutSlowInEasing
     val syncEasing = FastOutSlowInEasing
 
-    LaunchedEffect(mode, currentBpm, isPlayingInCurrentMode) {
+    LaunchedEffect(mode, currentBpm, isMusicPlaying) {
         while (true) {
-            if (!isPlayingInCurrentMode) {
+            if (!isMusicPlaying) {
                 // Idle tremor: gentle slow pulse while waiting for playback
                 heartScale.animateTo(
                     targetValue = 1.03f,
@@ -282,7 +282,7 @@ fun GeometricHeartContent(
 
                     // BPM: 16dp below heart, moves with heart
                     androidx.compose.material3.Text(
-                        text = if (isPlayingInCurrentMode) currentBpm.toString() else "--",
+                        text = if (isMusicPlaying) currentBpm.toString() else "--",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 32.sp,
                         color = accentColor,
