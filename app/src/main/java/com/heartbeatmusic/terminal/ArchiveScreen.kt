@@ -340,22 +340,26 @@ private fun SwipeToRevealContainer(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
         ) {
+            // Red reveal area — matchParentSize() is measured after the card establishes
+            // the parent Box's height, so the red area is always the same height as the card.
             if (offsetPx.value < 0f) {
                 val revealedWidth = with(density) { (-offsetPx.value).toDp() }
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .width(revealedWidth)
-                        .fillMaxHeight()
-                        .background(SwipeDeleteBg)
-                        .clickable(onClick = onTrashClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = "Delete",
-                        tint = Color.White
-                    )
+                Box(modifier = Modifier.matchParentSize()) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .width(revealedWidth)
+                            .fillMaxHeight()
+                            .background(SwipeDeleteBg)
+                            .clickable(onClick = onTrashClick),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Delete",
+                            tint = Color.White
+                        )
+                    }
                 }
             }
 
