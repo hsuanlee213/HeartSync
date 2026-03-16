@@ -174,7 +174,6 @@ class HeartSyncViewModel @Inject constructor(
 
     init {
         collectHeartRate()
-        startMonitoring()
         observePlaybackState()
         initPlaybackState()
         collectionRepository.collectionFlow()
@@ -196,6 +195,12 @@ class HeartSyncViewModel @Inject constructor(
                     }
                     pendingTransition = PlaybackTransition.Idle
                     _isMusicPlaying.value = isPlaying
+                    if (isPlaying) {
+                        heartRateProvider.startMonitoring()
+                    } else {
+                        heartRateProvider.stopMonitoring()
+                        _currentHeartRate.value = 0
+                    }
                     if (isPlaying) {
                         if (sessionStartTime == null) {
                             sessionStartTime = System.currentTimeMillis()

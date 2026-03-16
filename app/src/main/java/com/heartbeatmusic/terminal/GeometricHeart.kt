@@ -143,26 +143,38 @@ fun GeometricHeartContent(
     val zenEasing = LinearOutSlowInEasing
     val syncEasing = FastOutSlowInEasing
 
-    LaunchedEffect(mode, currentBpm) {
+    LaunchedEffect(mode, currentBpm, isPlayingInCurrentMode) {
         while (true) {
-            val cycleMs = (bpmToDurationMs(updatedBpm.value) * breathMult).toInt().coerceAtLeast(500)
-            val easing = when (mode) {
-                TerminalMode.ZEN -> zenEasing
-                TerminalMode.SYNC -> syncEasing
-                TerminalMode.OVERDRIVE -> syncEasing
-            }
-            heartScale.animateTo(
-                targetValue = 1.12f,
-                animationSpec = keyframes {
-                    durationMillis = cycleMs
-                    1f at 0 using easing
-                    1.1f at (cycleMs * 0.08f).toInt() using easing
-                    1.02f at (cycleMs * 0.2f).toInt() using easing
-                    1.1f at (cycleMs * 0.3f).toInt() using easing
-                    1.02f at (cycleMs * 0.4f).toInt() using easing
-                    1f at cycleMs using easing
+            if (!isPlayingInCurrentMode) {
+                // Idle tremor: gentle slow pulse while waiting for playback
+                heartScale.animateTo(
+                    targetValue = 1.03f,
+                    animationSpec = tween(1400, easing = FastOutSlowInEasing)
+                )
+                heartScale.animateTo(
+                    targetValue = 1.0f,
+                    animationSpec = tween(1400, easing = FastOutSlowInEasing)
+                )
+            } else {
+                val cycleMs = (bpmToDurationMs(updatedBpm.value) * breathMult).toInt().coerceAtLeast(500)
+                val easing = when (mode) {
+                    TerminalMode.ZEN -> zenEasing
+                    TerminalMode.SYNC -> syncEasing
+                    TerminalMode.OVERDRIVE -> syncEasing
                 }
-            )
+                heartScale.animateTo(
+                    targetValue = 1.12f,
+                    animationSpec = keyframes {
+                        durationMillis = cycleMs
+                        1f at 0 using easing
+                        1.1f at (cycleMs * 0.08f).toInt() using easing
+                        1.02f at (cycleMs * 0.2f).toInt() using easing
+                        1.1f at (cycleMs * 0.3f).toInt() using easing
+                        1.02f at (cycleMs * 0.4f).toInt() using easing
+                        1f at cycleMs using easing
+                    }
+                )
+            }
         }
     }
 
@@ -270,7 +282,7 @@ fun GeometricHeartContent(
 
                     // BPM: 16dp below heart, moves with heart
                     androidx.compose.material3.Text(
-                        text = currentBpm.toString(),
+                        text = if (isPlayingInCurrentMode) currentBpm.toString() else "--",
                         fontFamily = FontFamily.Monospace,
                         fontSize = 32.sp,
                         color = accentColor,
