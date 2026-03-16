@@ -9,15 +9,19 @@ import androidx.room.RoomDatabase
     entities = [
         CollectionItemEntity::class,
         SyncSessionEntity::class,
-        UserProfileEntity::class
+        UserProfileEntity::class,
+        DailyGoalEntity::class,
+        AchievementEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun collectionDao(): CollectionDao
     abstract fun syncSessionDao(): SyncSessionDao
     abstract fun userProfileDao(): UserProfileDao
+    abstract fun dailyGoalDao(): DailyGoalDao
+    abstract fun achievementDao(): AchievementDao
 
     companion object {
         @Volatile
