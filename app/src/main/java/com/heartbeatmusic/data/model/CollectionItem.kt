@@ -9,5 +9,6 @@ data class CollectionItem(
     val title: String,
     val artist: String,
     val mode: String, // ZEN, SYNC, OVERDRIVE
-    val coverUrl: String = ""
+    val coverUrl: String = "",
+    val addedAt: Long = 0L
 )

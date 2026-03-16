@@ -15,7 +15,8 @@ data class CollectionItemEntity(
     val title: String,
     val artist: String,
     val mode: String,
-    val coverUrl: String = ""
+    val coverUrl: String = "",
+    val addedAt: Long = 0L
 ) {
     fun toCollectionItem() = CollectionItem(
         id = id,
@@ -23,7 +24,8 @@ data class CollectionItemEntity(
         title = title,
         artist = artist,
         mode = mode,
-        coverUrl = coverUrl
+        coverUrl = coverUrl,
+        addedAt = addedAt
     )
 }
 
@@ -33,5 +35,6 @@ fun CollectionItem.toEntity() = CollectionItemEntity(
     title = title,
     artist = artist,
     mode = mode,
-    coverUrl = coverUrl
+    coverUrl = coverUrl,
+    addedAt = addedAt
 )

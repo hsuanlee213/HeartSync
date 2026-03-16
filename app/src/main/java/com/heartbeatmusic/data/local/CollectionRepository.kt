@@ -36,6 +36,7 @@ class CollectionRepository(
         coverUrl: String = ""
     ) = withContext(Dispatchers.IO) {
         val id = "${songId}_${mode}"
+        val addedAt = System.currentTimeMillis()
         dao.insert(
             CollectionItemEntity(
                 id = id,
@@ -43,10 +44,11 @@ class CollectionRepository(
                 title = title,
                 artist = artist,
                 mode = mode,
-                coverUrl = coverUrl
+                coverUrl = coverUrl,
+                addedAt = addedAt
             )
         )
-        remote.addToCollection(songId, title, artist, mode, coverUrl)
+        remote.addToCollection(songId, title, artist, mode, coverUrl, addedAt)
             .onFailure { Log.w(TAG, "Background sync add failed", it) }
     }
 
@@ -84,7 +86,7 @@ class CollectionRepository(
 
         // Persist backfilled cover URLs back to Firestore so future syncs don't need to re-fetch.
         enriched.filter { it.coverUrl.isNotEmpty() }.forEach { item ->
-            remote.addToCollection(item.songId, item.title, item.artist, item.mode, item.coverUrl)
+            remote.addToCollection(item.songId, item.title, item.artist, item.mode, item.coverUrl, item.addedAt)
                 .onFailure { Log.w(TAG, "Cover URL backfill Firestore write failed for ${item.songId}", it) }
         }
     }
