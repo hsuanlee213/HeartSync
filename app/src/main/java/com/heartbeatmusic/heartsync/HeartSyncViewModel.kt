@@ -58,6 +58,9 @@ sealed class PlaybackTransition {
     /** Player is momentarily stopping while switching to a fallback audio source.
      *  Suppress the isPlaying=false event so the UI does not flicker. */
     object NetworkFallback : PlaybackTransition()
+    /** Player is stopping because the user switched terminal mode.
+     *  Suppress the isPlaying=false event so heart rate and animation continue uninterrupted. */
+    object ModeSwitch : PlaybackTransition()
     /** No pending transition — normal playback flow. */
     object Idle : PlaybackTransition()
 }
@@ -188,6 +191,7 @@ class HeartSyncViewModel @Inject constructor(
                 viewModelScope.launch(Dispatchers.Main.immediate) {
                     if (!isPlaying) {
                         if (pendingTransition is PlaybackTransition.NetworkFallback) return@launch
+                        if (pendingTransition is PlaybackTransition.ModeSwitch) return@launch
                         if (_playbackSource.value == "Local" && pendingTransition !is PlaybackTransition.UserPause) {
                             Log.d(TAG, "HeartSync_Debug: Ignoring isPlaying=false (Local source, not user pause)")
                             return@launch
@@ -512,6 +516,7 @@ class HeartSyncViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.Main.immediate) {
             val mode = _currentMode.value
             Log.d(TAG, "HeartSync_Audio: Playing: $mode, stopping previous tracks...")
+            pendingTransition = PlaybackTransition.ModeSwitch
             player.stop()
             player.clearMediaItems()
             stopProgressUpdates()
