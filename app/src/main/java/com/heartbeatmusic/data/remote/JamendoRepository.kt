@@ -60,6 +60,7 @@ fun TerminalMode.toJamendoParams() = when (this) {
     )
     TerminalMode.OVERDRIVE -> JamendoParams(
         speed = "high",
-        fuzzytags = "electronic+rock+dance+energetic+workout"
+        fuzzytags = "electronic+rock+dance+energetic+workout",
+        vocalInstrumental = "vocal"
     )
 }
