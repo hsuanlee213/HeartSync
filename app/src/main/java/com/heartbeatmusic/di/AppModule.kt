@@ -1,8 +1,10 @@
 package com.heartbeatmusic.di
 
 import android.content.Context
+import com.heartbeatmusic.data.local.AchievementRepository
 import com.heartbeatmusic.data.local.AvatarRepository
 import com.heartbeatmusic.data.local.CollectionRepository
+import com.heartbeatmusic.data.local.DailyGoalRepository
 import com.heartbeatmusic.data.local.EssentialAudioRepository
 import com.heartbeatmusic.data.local.SessionRepository
 import com.heartbeatmusic.data.remote.ArchiveRepository
@@ -70,4 +72,16 @@ object AppModule {
     @Singleton
     fun provideJamendoRepository(api: JamendoApiService): JamendoRepository =
         JamendoRepository(api)
+
+    @Provides
+    @Singleton
+    fun provideDailyGoalRepository(
+        @ApplicationContext context: Context
+    ): DailyGoalRepository = DailyGoalRepository(context)
+
+    @Provides
+    @Singleton
+    fun provideAchievementRepository(
+        @ApplicationContext context: Context
+    ): AchievementRepository = AchievementRepository(context)
 }
