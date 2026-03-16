@@ -6,7 +6,8 @@ import com.heartbeatmusic.data.model.DailyGoal
 
 @Entity(tableName = "daily_goals")
 data class DailyGoalEntity(
-    @PrimaryKey val id: String,       // e.g. "2026-03-16_ZEN"
+    @PrimaryKey val id: String,       // e.g. "userId_2026-03-16_ZEN"
+    val userId: String,
     val mode: String,                 // ZEN, SYNC, OVERDRIVE
     val targetMinutes: Int,
     val accumulatedSeconds: Int = 0,
@@ -15,6 +16,7 @@ data class DailyGoalEntity(
 ) {
     fun toDailyGoal() = DailyGoal(
         id = id,
+        userId = userId,
         mode = mode,
         targetMinutes = targetMinutes,
         accumulatedSeconds = accumulatedSeconds,
@@ -25,6 +27,7 @@ data class DailyGoalEntity(
 
 fun DailyGoal.toEntity() = DailyGoalEntity(
     id = id,
+    userId = userId,
     mode = mode,
     targetMinutes = targetMinutes,
     accumulatedSeconds = accumulatedSeconds,

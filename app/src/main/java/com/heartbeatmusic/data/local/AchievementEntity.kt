@@ -6,7 +6,8 @@ import com.heartbeatmusic.data.model.Achievement
 
 @Entity(tableName = "achievements")
 data class AchievementEntity(
-    @PrimaryKey val id: String,   // e.g. "2026-03"
+    @PrimaryKey val id: String,   // e.g. "userId_2026-03"
+    val userId: String,
     val year: Int,
     val month: Int,               // 1-12
     val completedCount: Int,
@@ -14,6 +15,7 @@ data class AchievementEntity(
 ) {
     fun toAchievement() = Achievement(
         id = id,
+        userId = userId,
         year = year,
         month = month,
         completedCount = completedCount,
@@ -23,6 +25,7 @@ data class AchievementEntity(
 
 fun Achievement.toEntity() = AchievementEntity(
     id = id,
+    userId = userId,
     year = year,
     month = month,
     completedCount = completedCount,

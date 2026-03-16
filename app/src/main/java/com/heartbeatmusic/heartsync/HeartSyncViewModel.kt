@@ -466,11 +466,12 @@ class HeartSyncViewModel @Inject constructor(
      * When accumulatedSeconds >= targetMinutes * 60, mark goal completed and trigger monthly achievement check.
      */
     private suspend fun accumulateGoalProgress() {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val playingMode = _playingMode.value ?: return
         if (!player.isPlaying) return
 
         val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val goals = dailyGoalRepository.getGoalsByDate(today)
+        val goals = dailyGoalRepository.getGoalsByDate(today).filter { it.userId == userId }
         val matchingGoal = goals.find { it.mode == playingMode.name && !it.isCompleted } ?: return
 
         val newAccumulated = matchingGoal.accumulatedSeconds + 1
@@ -492,7 +493,8 @@ class HeartSyncViewModel @Inject constructor(
 
     /** Upsert achievement record for a given month (yearMonth = "2026-03"). */
     private suspend fun recordAchievementForMonth(yearMonth: String) {
-        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth).filter { it.userId == userId }
         if (goals.isEmpty()) return
         val completed = goals.count { it.isCompleted }
         val parts = yearMonth.split("-")
@@ -501,7 +503,8 @@ class HeartSyncViewModel @Inject constructor(
         val month = parts[1].toIntOrNull() ?: return
         achievementRepository.insertAchievement(
             Achievement(
-                id = yearMonth,
+                id = "${userId}_$yearMonth",
+                userId = userId,
                 year = year,
                 month = month,
                 completedCount = completed,

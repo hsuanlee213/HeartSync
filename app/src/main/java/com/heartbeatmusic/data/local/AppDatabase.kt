@@ -13,7 +13,7 @@ import androidx.room.RoomDatabase
         DailyGoalEntity::class,
         AchievementEntity::class
     ],
-    version = 7,
+    version = 8,  // v7 -> v8: add userId to DailyGoalEntity, AchievementEntity
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

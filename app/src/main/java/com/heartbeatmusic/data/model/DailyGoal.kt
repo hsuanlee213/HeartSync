@@ -5,7 +5,8 @@ package com.heartbeatmusic.data.model
  * Two goals are generated per day, each targeting a specific mode and duration.
  */
 data class DailyGoal(
-    val id: String,           // e.g. "2026-03-16_ZEN"
+    val id: String,           // e.g. "userId_2026-03-16_ZEN"
+    val userId: String,
     val mode: String,         // ZEN, SYNC, OVERDRIVE
     val targetMinutes: Int,   // 10, 15, 20, 25, or 30
     val accumulatedSeconds: Int = 0,

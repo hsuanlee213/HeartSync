@@ -2,6 +2,7 @@ package com.heartbeatmusic.terminal
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.data.local.AchievementRepository
 import com.heartbeatmusic.data.local.DailyGoalRepository
 import com.heartbeatmusic.data.model.Achievement
@@ -37,12 +38,15 @@ class GoalsViewModel @Inject constructor(
 
     init {
         val today = LocalDate.now().format(DATE_FORMAT)
-        dailyGoalRepository.todayGoalsFlow(today)
-            .onEach { _todayGoals.value = it }
-            .launchIn(viewModelScope)
-        achievementRepository.achievementsFlow()
-            .onEach { _achievements.value = it }
-            .launchIn(viewModelScope)
+        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        if (userId != null) {
+            dailyGoalRepository.todayGoalsFlow(today)
+                .onEach { _todayGoals.value = it.filter { g -> g.userId == userId } }
+                .launchIn(viewModelScope)
+            achievementRepository.achievementsFlow()
+                .onEach { _achievements.value = it.filter { a -> a.userId == userId } }
+                .launchIn(viewModelScope)
+        }
         viewModelScope.launch(Dispatchers.IO) {
             generateTodayGoalsIfNeeded(today)
             ensureLastMonthAchievementRecorded(today)
@@ -54,14 +58,16 @@ class GoalsViewModel @Inject constructor(
      * Count completed/total goals for the previous month and insert or update AchievementEntity.
      */
     private suspend fun ensureLastMonthAchievementRecorded(today: String) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val lastMonth = LocalDate.parse(today).minusMonths(1)
         val yearMonth = "${lastMonth.year}-${lastMonth.monthValue.toString().padStart(2, '0')}"
-        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth)
+        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth).filter { it.userId == userId }
         if (goals.isEmpty()) return
         val completed = goals.count { it.isCompleted }
         achievementRepository.insertAchievement(
             Achievement(
-                id = yearMonth,
+                id = "${userId}_$yearMonth",
+                userId = userId,
                 year = lastMonth.year,
                 month = lastMonth.monthValue,
                 completedCount = completed,
@@ -71,15 +77,17 @@ class GoalsViewModel @Inject constructor(
     }
 
     private suspend fun generateTodayGoalsIfNeeded(today: String) {
+        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val existing = dailyGoalRepository.getGoalsByDate(today)
-        if (existing.isNotEmpty()) return
+        if (existing.any { it.userId == userId }) return
 
         val modes = ALL_MODES.shuffled().take(2)
         modes.forEach { mode ->
             val targetMinutes = TARGET_MINUTES_OPTIONS[Random.nextInt(TARGET_MINUTES_OPTIONS.size)]
             dailyGoalRepository.insertGoal(
                 DailyGoal(
-                    id = "${today}_${mode}",
+                    id = "${userId}_${today}_${mode}",
+                    userId = userId,
                     mode = mode,
                     targetMinutes = targetMinutes,
                     accumulatedSeconds = 0,
