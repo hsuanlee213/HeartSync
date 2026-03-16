@@ -607,23 +607,17 @@ private fun CollectionContent(
             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
             delay(350)
             deletingCollectionIds = deletingCollectionIds - item.id
-            viewModel.removeFromCollection(item.songId, item.mode)
+            // Hide from UI immediately — DB is not touched yet so UNDO is always safe,
+            // even if the user switches tabs and this coroutine scope is later cancelled.
+            viewModel.removeFromCollectionUI(item)
             val result = snackbarHostState.showSnackbar(
                 message = "Song removed from collection",
                 actionLabel = "UNDO",
                 duration = SnackbarDuration.Long
             )
             when (result) {
-                SnackbarResult.ActionPerformed -> {
-                    viewModel.addToCollection(
-                        item.songId,
-                        item.title,
-                        item.artist,
-                        item.mode,
-                        item.coverUrl
-                    )
-                }
-                SnackbarResult.Dismissed -> { }
+                SnackbarResult.ActionPerformed -> viewModel.restoreInCollection(item)
+                SnackbarResult.Dismissed -> viewModel.removeFromCollection(item.songId, item.mode)
             }
         }
     }

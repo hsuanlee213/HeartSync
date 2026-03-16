@@ -24,6 +24,7 @@ class ArchiveViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val pendingDeletion: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    private val pendingCollectionDeletion: MutableSet<String> = ConcurrentHashMap.newKeySet()
 
     private val _sessions = MutableStateFlow<List<SyncSession>>(emptyList())
     val sessions: StateFlow<List<SyncSession>> = _sessions.asStateFlow()
@@ -39,7 +40,7 @@ class ArchiveViewModel @Inject constructor(
             .onEach { fromDb -> _sessions.value = fromDb.filter { it.id !in pendingDeletion } }
             .launchIn(viewModelScope)
         collectionRepository.collectionFlow()
-            .onEach { _collection.value = it }
+            .onEach { list -> _collection.value = list.filter { it.id !in pendingCollectionDeletion } }
             .launchIn(viewModelScope)
         viewModelScope.launch(Dispatchers.IO) {
             collectionRepository.syncFromFirestore()
@@ -82,7 +83,26 @@ class ArchiveViewModel @Inject constructor(
         }
     }
 
+    /** Hide item from UI immediately without touching DB — call before showing the UNDO snackbar. */
+    fun removeFromCollectionUI(item: CollectionItem) {
+        pendingCollectionDeletion.add(item.id)
+        _collection.value = _collection.value.filter { it.id != item.id }
+    }
+
+    /** Restore item to UI — call when user taps UNDO. */
+    fun restoreInCollection(item: CollectionItem) {
+        pendingCollectionDeletion.remove(item.id)
+        val current = _collection.value.toMutableList()
+        if (current.none { it.id == item.id }) {
+            current.add(item)
+            _collection.value = current.sortedByDescending { it.addedAt }
+        }
+    }
+
+    /** Persist deletion to DB + Firestore — call when UNDO snackbar is dismissed. */
     fun removeFromCollection(songId: String, mode: String) {
+        val id = "${songId}_${mode}"
+        pendingCollectionDeletion.remove(id)
         viewModelScope.launch(Dispatchers.IO) {
             collectionRepository.removeFromCollection(songId, mode)
         }
