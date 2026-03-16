@@ -40,11 +40,11 @@ class GoalsViewModel @Inject constructor(
         val today = LocalDate.now().format(DATE_FORMAT)
         val userId = FirebaseAuth.getInstance().currentUser?.uid
         if (userId != null) {
-            dailyGoalRepository.todayGoalsFlow(today)
-                .onEach { _todayGoals.value = it.filter { g -> g.userId == userId } }
+            dailyGoalRepository.todayGoalsFlow(userId, today)
+                .onEach { _todayGoals.value = it }
                 .launchIn(viewModelScope)
-            achievementRepository.achievementsFlow()
-                .onEach { _achievements.value = it.filter { a -> a.userId == userId } }
+            achievementRepository.achievementsFlow(userId)
+                .onEach { _achievements.value = it }
                 .launchIn(viewModelScope)
         }
         viewModelScope.launch(Dispatchers.IO) {
@@ -61,7 +61,7 @@ class GoalsViewModel @Inject constructor(
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
         val lastMonth = LocalDate.parse(today).minusMonths(1)
         val yearMonth = "${lastMonth.year}-${lastMonth.monthValue.toString().padStart(2, '0')}"
-        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth).filter { it.userId == userId }
+        val goals = dailyGoalRepository.getGoalsByMonth(userId, yearMonth)
         if (goals.isEmpty()) return
         val completed = goals.count { it.isCompleted }
         achievementRepository.insertAchievement(
@@ -78,8 +78,8 @@ class GoalsViewModel @Inject constructor(
 
     private suspend fun generateTodayGoalsIfNeeded(today: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val existing = dailyGoalRepository.getGoalsByDate(today)
-        if (existing.any { it.userId == userId }) return
+        val existing = dailyGoalRepository.getGoalsByDate(userId, today)
+        if (existing.isNotEmpty()) return
 
         val modes = ALL_MODES.shuffled().take(2)
         modes.forEach { mode ->

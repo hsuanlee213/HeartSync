@@ -15,13 +15,13 @@ class DailyGoalRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).dailyGoalDao()
 
-    /** Observe today's goals in real time. */
-    fun todayGoalsFlow(date: String): Flow<List<DailyGoal>> =
-        dao.getByDateFlow(date).map { list -> list.map { it.toDailyGoal() } }
+    /** Observe today's goals in real time for the given user. */
+    fun todayGoalsFlow(userId: String, date: String): Flow<List<DailyGoal>> =
+        dao.getByDateFlow(userId, date).map { list -> list.map { it.toDailyGoal() } }
 
-    /** Check whether goals already exist for a given date. */
-    suspend fun getGoalsByDate(date: String): List<DailyGoal> = withContext(Dispatchers.IO) {
-        dao.getByDate(date).map { it.toDailyGoal() }
+    /** Check whether goals already exist for a given date and user. */
+    suspend fun getGoalsByDate(userId: String, date: String): List<DailyGoal> = withContext(Dispatchers.IO) {
+        dao.getByDate(userId, date).map { it.toDailyGoal() }
     }
 
     /** Insert a new goal (ignored if id already exists). */
@@ -34,8 +34,8 @@ class DailyGoalRepository(context: Context) {
         dao.update(goal.toEntity())
     }
 
-    /** Fetch all goals belonging to a given month (yearMonth = "2026-03"). */
-    suspend fun getGoalsByMonth(yearMonth: String): List<DailyGoal> = withContext(Dispatchers.IO) {
-        dao.getByMonth(yearMonth).map { it.toDailyGoal() }
+    /** Fetch all goals belonging to a given month and user (yearMonth = "2026-03"). */
+    suspend fun getGoalsByMonth(userId: String, yearMonth: String): List<DailyGoal> = withContext(Dispatchers.IO) {
+        dao.getByMonth(userId, yearMonth).map { it.toDailyGoal() }
     }
 }

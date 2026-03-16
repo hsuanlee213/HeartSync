@@ -14,9 +14,9 @@ class AchievementRepository(context: Context) {
 
     private val dao = AppDatabase.getInstance(context).achievementDao()
 
-    /** Observe all achievement records ordered by most recent month. */
-    fun achievementsFlow(): Flow<List<Achievement>> =
-        dao.getAllFlow().map { list -> list.map { it.toAchievement() } }
+    /** Observe all achievement records for the given user, ordered by most recent month. */
+    fun achievementsFlow(userId: String): Flow<List<Achievement>> =
+        dao.getAllFlow(userId).map { list -> list.map { it.toAchievement() } }
 
     /** Insert or replace an achievement record for a given month. */
     suspend fun insertAchievement(achievement: Achievement) = withContext(Dispatchers.IO) {

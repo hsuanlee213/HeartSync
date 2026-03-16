@@ -16,12 +16,12 @@ interface DailyGoalDao {
     @Update
     suspend fun update(entity: DailyGoalEntity)
 
-    @Query("SELECT * FROM daily_goals WHERE date = :date")
-    fun getByDateFlow(date: String): Flow<List<DailyGoalEntity>>
+    @Query("SELECT * FROM daily_goals WHERE userId = :userId AND date = :date")
+    fun getByDateFlow(userId: String, date: String): Flow<List<DailyGoalEntity>>
 
-    @Query("SELECT * FROM daily_goals WHERE date = :date")
-    suspend fun getByDate(date: String): List<DailyGoalEntity>
+    @Query("SELECT * FROM daily_goals WHERE userId = :userId AND date = :date")
+    suspend fun getByDate(userId: String, date: String): List<DailyGoalEntity>
 
-    @Query("SELECT * FROM daily_goals WHERE date LIKE :yearMonth || '%'")
-    suspend fun getByMonth(yearMonth: String): List<DailyGoalEntity>
+    @Query("SELECT * FROM daily_goals WHERE userId = :userId AND date LIKE :yearMonth || '%'")
+    suspend fun getByMonth(userId: String, yearMonth: String): List<DailyGoalEntity>
 }

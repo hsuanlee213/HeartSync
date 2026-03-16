@@ -471,7 +471,7 @@ class HeartSyncViewModel @Inject constructor(
         if (!player.isPlaying) return
 
         val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
-        val goals = dailyGoalRepository.getGoalsByDate(today).filter { it.userId == userId }
+        val goals = dailyGoalRepository.getGoalsByDate(userId, today)
         val matchingGoal = goals.find { it.mode == playingMode.name && !it.isCompleted } ?: return
 
         val newAccumulated = matchingGoal.accumulatedSeconds + 1
@@ -494,7 +494,7 @@ class HeartSyncViewModel @Inject constructor(
     /** Upsert achievement record for a given month (yearMonth = "2026-03"). */
     private suspend fun recordAchievementForMonth(yearMonth: String) {
         val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
-        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth).filter { it.userId == userId }
+        val goals = dailyGoalRepository.getGoalsByMonth(userId, yearMonth)
         if (goals.isEmpty()) return
         val completed = goals.count { it.isCompleted }
         val parts = yearMonth.split("-")

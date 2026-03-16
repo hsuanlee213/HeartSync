@@ -12,6 +12,6 @@ interface AchievementDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(entity: AchievementEntity)
 
-    @Query("SELECT * FROM achievements ORDER BY year DESC, month DESC")
-    fun getAllFlow(): Flow<List<AchievementEntity>>
+    @Query("SELECT * FROM achievements WHERE userId = :userId ORDER BY year DESC, month DESC")
+    fun getAllFlow(userId: String): Flow<List<AchievementEntity>>
 }
