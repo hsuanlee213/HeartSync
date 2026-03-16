@@ -9,7 +9,7 @@ interface JamendoApiService {
     suspend fun getTracks(
         @Query("client_id") clientId: String,
         @Query("format") format: String = "json",
-        @Query("limit") limit: Int = 50,
+        @Query("limit") limit: Int = 200,
         @Query("audioformat") audioFormat: String = "mp32",
         @Query("speed") speed: String,
         @Query("fuzzytags") fuzzytags: String,
