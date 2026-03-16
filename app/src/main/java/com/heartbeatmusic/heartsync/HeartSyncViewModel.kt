@@ -13,9 +13,12 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.PlayerHolder
+import com.heartbeatmusic.data.model.Achievement
 import com.heartbeatmusic.data.model.CollectionItem
+import com.heartbeatmusic.data.model.DailyGoal
 import com.heartbeatmusic.data.model.Song
 import com.heartbeatmusic.data.model.SyncSession
+import com.heartbeatmusic.data.local.AchievementRepository
 import com.heartbeatmusic.data.local.CollectionRepository
 import com.heartbeatmusic.data.local.DailyGoalRepository
 import com.heartbeatmusic.data.local.EssentialAudioRepository
@@ -82,7 +85,8 @@ class HeartSyncViewModel @Inject constructor(
     private val essentialAudioRepository: EssentialAudioRepository,
     private val collectionRepository: CollectionRepository,
     private val sessionRepository: SessionRepository,
-    private val dailyGoalRepository: DailyGoalRepository
+    private val dailyGoalRepository: DailyGoalRepository,
+    private val achievementRepository: AchievementRepository
 ) : AndroidViewModel(application) {
 
     private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
@@ -434,6 +438,7 @@ class HeartSyncViewModel @Inject constructor(
         progressJob?.cancel()
         progressJob = viewModelScope.launch {
             var autoSaveTick = 0
+            var lastGoalTickMs = System.currentTimeMillis()
             while (isActive) {
                 val dur = player.duration
                 val pos = player.currentPosition
@@ -443,9 +448,70 @@ class HeartSyncViewModel @Inject constructor(
                     autoSaveSession()
                     autoSaveTick = 0
                 }
+                val now = System.currentTimeMillis()
+                if (now - lastGoalTickMs >= 1000) {
+                    lastGoalTickMs = now
+                    accumulateGoalProgress()
+                }
                 delay(300)
             }
         }
+    }
+
+    /**
+     * When music is playing, accumulate time toward today's goal for the current playing mode.
+     * When accumulatedSeconds >= targetMinutes * 60, mark goal completed and trigger monthly achievement check.
+     */
+    private suspend fun accumulateGoalProgress() {
+        val playingMode = _playingMode.value ?: return
+        if (!player.isPlaying) return
+
+        val today = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE)
+        val goals = dailyGoalRepository.getGoalsByDate(today)
+        val matchingGoal = goals.find { it.mode == playingMode.name && !it.isCompleted } ?: return
+
+        val newAccumulated = matchingGoal.accumulatedSeconds + 1
+        val targetSeconds = matchingGoal.targetMinutes * 60
+        val isNowCompleted = newAccumulated >= targetSeconds
+
+        val updatedGoal = matchingGoal.copy(
+            accumulatedSeconds = newAccumulated.coerceAtMost(targetSeconds),
+            isCompleted = isNowCompleted
+        )
+        dailyGoalRepository.updateGoal(updatedGoal)
+
+        if (isNowCompleted) {
+            Log.d(TAG, "HeartSync_Goals: Goal completed: ${matchingGoal.mode} ${matchingGoal.targetMinutes}min")
+            recordAchievementForMonth(today.substring(0, 7)) // current month "2026-03"
+            recordAchievementForLastMonth(today)
+        }
+    }
+
+    /** Upsert achievement record for a given month (yearMonth = "2026-03"). */
+    private suspend fun recordAchievementForMonth(yearMonth: String) {
+        val goals = dailyGoalRepository.getGoalsByMonth(yearMonth)
+        if (goals.isEmpty()) return
+        val completed = goals.count { it.isCompleted }
+        val parts = yearMonth.split("-")
+        if (parts.size != 2) return
+        val year = parts[0].toIntOrNull() ?: return
+        val month = parts[1].toIntOrNull() ?: return
+        achievementRepository.insertAchievement(
+            Achievement(
+                id = yearMonth,
+                year = year,
+                month = month,
+                completedCount = completed,
+                totalCount = goals.size
+            )
+        )
+    }
+
+    /** Ensure last month's achievement is recorded (Step 6 trigger on goal completion). */
+    private suspend fun recordAchievementForLastMonth(today: String) {
+        val lastMonth = LocalDate.parse(today).minusMonths(1)
+        val yearMonth = "${lastMonth.year}-${lastMonth.monthValue.toString().padStart(2, '0')}"
+        recordAchievementForMonth(yearMonth)
     }
 
     private fun stopProgressUpdates() {
