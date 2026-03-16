@@ -179,7 +179,6 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
                         snackbarHostState = snackbarHostState
                     )
                     else -> CollectionContent(
-                        items = collection,
                         viewModel = viewModel,
                         snackbarHostState = snackbarHostState
                     )
@@ -592,10 +591,13 @@ private fun SessionSongItem(
 
 @Composable
 private fun CollectionContent(
-    items: List<CollectionItem>,
     viewModel: ArchiveViewModel,
     snackbarHostState: SnackbarHostState
 ) {
+    // Observe the collection StateFlow directly here so that any change to _collection.value
+    // triggers a recomposition of THIS composable immediately, rather than relying on
+    // AnimatedContent to propagate the updated `items` parameter down through its lambda.
+    val items by viewModel.collection.collectAsStateWithLifecycle(initialValue = emptyList())
     var deletingCollectionIds by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
