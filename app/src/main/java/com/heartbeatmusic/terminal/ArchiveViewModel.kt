@@ -89,12 +89,21 @@ class ArchiveViewModel @Inject constructor(
         _collection.value = _collection.value.filter { it.id != item.id }
     }
 
-    /** Restore item — call when user taps UNDO. Clears the pending-deletion filter and
-     *  does an INSERT OR REPLACE in Room so the Flow re-emits and the UI updates immediately. */
+    /** Restore item — call when user taps UNDO.
+     *  Updates _collection.value immediately (synchronous, shows item at once) and
+     *  re-inserts into Room in the background to keep the DB consistent. */
     fun restoreInCollection(item: CollectionItem) {
         pendingCollectionDeletion.remove(item.id)
+        // Immediate UI update — CollectionContent observes this StateFlow directly,
+        // so it recomposes as soon as this assignment runs on the main thread.
+        val current = _collection.value.toMutableList()
+        if (current.none { it.id == item.id }) {
+            current.add(item)
+            _collection.value = current.sortedByDescending { it.addedAt }
+        }
+        // Background Room + Firestore sync — pass original addedAt to preserve sort position.
         viewModelScope.launch(Dispatchers.IO) {
-            collectionRepository.addToCollection(item.songId, item.title, item.artist, item.mode, item.coverUrl)
+            collectionRepository.addToCollection(item.songId, item.title, item.artist, item.mode, item.coverUrl, item.addedAt)
         }
     }
 

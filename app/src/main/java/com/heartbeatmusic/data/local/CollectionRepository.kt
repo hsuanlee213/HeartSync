@@ -33,10 +33,10 @@ class CollectionRepository(
         title: String,
         artist: String,
         mode: String,
-        coverUrl: String = ""
+        coverUrl: String = "",
+        addedAt: Long = System.currentTimeMillis()
     ) = withContext(Dispatchers.IO) {
         val id = "${songId}_${mode}"
-        val addedAt = System.currentTimeMillis()
         dao.insert(
             CollectionItemEntity(
                 id = id,
