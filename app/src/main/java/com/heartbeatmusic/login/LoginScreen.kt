@@ -107,7 +107,7 @@ fun LoginScreen(
             onClick = { onLoginClick() }
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(36.dp))
 
         Text(
             text = "First time user?",
