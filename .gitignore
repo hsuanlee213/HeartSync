@@ -21,6 +21,7 @@ local.properties
 
 todo.md
 todoAPI.md
+todoGoals.md
 
 # Firebase 腳本用（勿提交金鑰）
 scripts/node_modules/
