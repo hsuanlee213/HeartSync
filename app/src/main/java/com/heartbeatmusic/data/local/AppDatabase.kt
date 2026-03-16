@@ -40,6 +40,7 @@ abstract class AppDatabase : RoomDatabase() {
             )
                 // v1 -> v2: add SyncSession table
                 // v2 -> v3: add UserProfile table (avatar local/remote)
+                // v7 -> v8: add userId to goals/achievements (dev: accepts full DB reset)
                 .fallbackToDestructiveMigration()
                 .build()
     }
