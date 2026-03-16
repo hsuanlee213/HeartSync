@@ -91,8 +91,7 @@ private val CyanBorder = Color.Cyan.copy(alpha = 0.3f)
 private val CyanText = Color.Cyan
 private val UnselectedGray = Color(0xFFB3B3B3)
 private val CardBg = Color(0xFF252540)
-private val SwipeDeleteBg = Color(0xFF8B0000)
-private val SwipeDeleteBorder = Color(0xFFDC143C)
+private val SwipeDeleteBg = Color(0xFFD32F2F)
 
 /** Align with TerminalMode.accentColor for consistent visual language. */
 private fun modeTagColors(mode: String): Pair<Color, Color> {
@@ -249,8 +248,8 @@ private fun Tab(
     }
 }
 
-private val TrashRevealWidth = 80.dp
-private val SnapThreshold = 40.dp
+private val TrashRevealWidth = 88.dp
+private val SnapThreshold = 50.dp
 
 @Composable
 private fun SessionsContent(
@@ -342,14 +341,13 @@ private fun SwipeToRevealContainer(
                 .clip(RoundedCornerShape(12.dp))
         ) {
             if (offsetPx.value < 0f) {
+                val revealedWidth = with(density) { (-offsetPx.value).toDp() }
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .width(TrashRevealWidth)
+                        .width(revealedWidth)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(12.dp))
                         .background(SwipeDeleteBg)
-                        .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(12.dp))
                         .clickable(onClick = onTrashClick),
                     contentAlignment = Alignment.Center
                 ) {
