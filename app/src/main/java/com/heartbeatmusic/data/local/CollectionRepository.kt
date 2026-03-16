@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.heartbeatmusic.data.model.CollectionItem
 import com.heartbeatmusic.data.remote.ArchiveRepository
+import com.heartbeatmusic.data.remote.JamendoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -17,7 +18,8 @@ private const val TAG = "CollectionRepository"
  */
 class CollectionRepository(
     private val context: Context,
-    private val remote: ArchiveRepository
+    private val remote: ArchiveRepository,
+    private val jamendo: JamendoRepository
 ) {
     private val dao = AppDatabase.getInstance(context).collectionDao()
 
@@ -55,12 +57,35 @@ class CollectionRepository(
             .onFailure { Log.w(TAG, "Background sync remove failed", it) }
     }
 
-    /** Pull Firestore collection once and replace local DB (e.g. on login or app start). */
+    /** Pull Firestore collection once and replace local DB (e.g. on login or app start).
+     *  Any items missing a coverUrl are backfilled via a single Jamendo batch lookup. */
     suspend fun syncFromFirestore() = withContext(Dispatchers.IO) {
         val list = remote.getCollectionOnce()
+
+        // Backfill cover URLs for items that were saved before cover tracking was added.
+        val missingCoverIds = list.filter { it.coverUrl.isEmpty() }.map { it.songId }
+        val coverMap = if (missingCoverIds.isNotEmpty()) {
+            jamendo.fetchCoverUrls(missingCoverIds)
+        } else {
+            emptyMap()
+        }
+
+        val enriched = list.map { item ->
+            if (item.coverUrl.isEmpty()) {
+                val fetched = coverMap[item.songId] ?: ""
+                if (fetched.isNotEmpty()) item.copy(coverUrl = fetched) else item
+            } else {
+                item
+            }
+        }
+
         dao.deleteAll()
-        list.forEach { item ->
-            dao.insert(item.toEntity())
+        enriched.forEach { item -> dao.insert(item.toEntity()) }
+
+        // Persist backfilled cover URLs back to Firestore so future syncs don't need to re-fetch.
+        enriched.filter { it.coverUrl.isNotEmpty() }.forEach { item ->
+            remote.addToCollection(item.songId, item.title, item.artist, item.mode, item.coverUrl)
+                .onFailure { Log.w(TAG, "Cover URL backfill Firestore write failed for ${item.songId}", it) }
         }
     }
 }

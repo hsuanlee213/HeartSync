@@ -15,6 +15,13 @@ interface JamendoApiService {
         @Query("fuzzytags") fuzzytags: String,
         @Query("vocalinstrumental") vocalInstrumental: String? = null
     ): JamendoResponse
+
+    @GET("tracks/")
+    suspend fun getTracksByIds(
+        @Query("client_id") clientId: String,
+        @Query("id[]") ids: List<String>,
+        @Query("format") format: String = "json"
+    ): JamendoResponse
 }
 
 data class JamendoResponse(val results: List<JamendoTrack>)

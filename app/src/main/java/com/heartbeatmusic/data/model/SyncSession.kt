@@ -12,5 +12,6 @@ data class SyncSession(
     val durationMinutes: Int,
     val songIds: List<String> = emptyList(),
     val songTitles: List<String> = emptyList(),
-    val songArtists: List<String> = emptyList()
+    val songArtists: List<String> = emptyList(),
+    val songCoverUrls: List<String> = emptyList()
 )

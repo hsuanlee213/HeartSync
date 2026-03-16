@@ -34,8 +34,9 @@ object AppModule {
     @Singleton
     fun provideCollectionRepository(
         @ApplicationContext context: Context,
-        archiveRepository: ArchiveRepository
-    ): CollectionRepository = CollectionRepository(context, archiveRepository)
+        archiveRepository: ArchiveRepository,
+        jamendoRepository: JamendoRepository
+    ): CollectionRepository = CollectionRepository(context, archiveRepository, jamendoRepository)
 
     @Provides
     @Singleton

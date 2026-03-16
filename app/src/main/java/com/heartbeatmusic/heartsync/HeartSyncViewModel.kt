@@ -163,10 +163,11 @@ class HeartSyncViewModel @Inject constructor(
     private val player = PlayerHolder.getInstance(application).player
     private var progressJob: Job? = null
 
+    private data class SongEntry(val id: String, val title: String, val artist: String, val coverUrl: String)
+
     private var sessionStartTime: Long? = null
     private var sessionMode: TerminalMode? = null
-    // Triple: (songId, title, artist)
-    private val sessionSongs = mutableListOf<Triple<String, String, String>>()
+    private val sessionSongs = mutableListOf<SongEntry>()
 
     // Dedicated scope for session saves — outlives viewModelScope so onCleared() saves complete
     private val sessionSaveScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -179,9 +180,6 @@ class HeartSyncViewModel @Inject constructor(
         collectionRepository.collectionFlow()
             .onEach { _collection.value = it }
             .launchIn(viewModelScope)
-        viewModelScope.launch(Dispatchers.IO) {
-            collectionRepository.syncFromFirestore()
-        }
     }
 
     private fun observePlaybackState() {
@@ -207,8 +205,9 @@ class HeartSyncViewModel @Inject constructor(
                                 val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                                 val title = mediaItem.mediaMetadata.title?.toString() ?: ""
                                 val artist = mediaItem.mediaMetadata.artist?.toString() ?: ""
-                                if (title.isNotEmpty() && sessionSongs.none { it.first == songId }) {
-                                    sessionSongs.add(Triple(songId, title, artist))
+                                val coverUrl = mediaItem.mediaMetadata.artworkUri?.toString() ?: ""
+                                if (title.isNotEmpty() && sessionSongs.none { it.id == songId }) {
+                                    sessionSongs.add(SongEntry(songId, title, artist, coverUrl))
                                 }
                             }
                         }
@@ -256,8 +255,9 @@ class HeartSyncViewModel @Inject constructor(
                             val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
                             val title = md?.title?.toString() ?: ""
                             val artist = md?.artist?.toString() ?: ""
-                            if (title.isNotEmpty() && sessionSongs.none { it.first == songId }) {
-                                sessionSongs.add(Triple(songId, title, artist))
+                            val coverUrl = md?.artworkUri?.toString() ?: ""
+                            if (title.isNotEmpty() && sessionSongs.none { it.id == songId }) {
+                                sessionSongs.add(SongEntry(songId, title, artist, coverUrl))
                             }
                         }
                     }
@@ -409,9 +409,10 @@ class HeartSyncViewModel @Inject constructor(
             startTimestamp = start,
             endTimestamp = endTime,
             durationMinutes = durationMinutes,
-            songIds = songs.map { it.first },
-            songTitles = songs.map { it.second },
-            songArtists = songs.map { it.third }
+            songIds = songs.map { it.id },
+            songTitles = songs.map { it.title },
+            songArtists = songs.map { it.artist },
+            songCoverUrls = songs.map { it.coverUrl }
         )
         sessionSaveScope.launch { sessionRepository.saveSession(session) }
     }

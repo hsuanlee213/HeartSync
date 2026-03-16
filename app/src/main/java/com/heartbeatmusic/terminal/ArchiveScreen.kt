@@ -447,13 +447,6 @@ private fun SessionCard(
     val durationSec = ((session.endTimestamp - session.startTimestamp) / 1_000).toInt().coerceAtLeast(0)
     val durationStr = if (durationSec >= 60) "${durationSec / 60}m" else "${durationSec}s"
     val songCount = session.songIds.size
-    val songs = session.songIds.indices.map { i ->
-        Triple(
-            session.songIds[i],
-            session.songTitles.getOrElse(i) { "" },
-            session.songArtists.getOrElse(i) { "" }
-        )
-    }
 
     Column(
         modifier = Modifier
@@ -510,14 +503,16 @@ private fun SessionCard(
                 }
             }
         }
-        if (isExpanded && songs.isNotEmpty()) {
+        if (isExpanded && session.songIds.isNotEmpty()) {
             Spacer(modifier = Modifier.height(12.dp))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                songs.forEach { (id, title, artist) ->
+                session.songIds.indices.forEach { i ->
+                    val id = session.songIds[i]
                     SessionSongItem(
                         songId = id,
-                        title = title,
-                        artist = artist,
+                        title = session.songTitles.getOrElse(i) { "" },
+                        artist = session.songArtists.getOrElse(i) { "" },
+                        coverUrl = session.songCoverUrls.getOrElse(i) { "" },
                         mode = session.mode,
                         isInCollection = collection.any { it.songId == id && it.mode == session.mode },
                         viewModel = viewModel
@@ -548,6 +543,7 @@ private fun SessionSongItem(
     songId: String,
     title: String,
     artist: String,
+    coverUrl: String,
     mode: String,
     isInCollection: Boolean,
     viewModel: ArchiveViewModel
@@ -585,7 +581,7 @@ private fun SessionSongItem(
                         if (isInCollection) {
                             viewModel.removeFromCollection(songId, mode)
                         } else {
-                            viewModel.addToCollection(songId, title, artist, mode)
+                            viewModel.addToCollection(songId, title, artist, mode, coverUrl)
                         }
                     }
                 )

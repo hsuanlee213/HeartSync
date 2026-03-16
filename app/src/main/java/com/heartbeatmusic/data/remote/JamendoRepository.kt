@@ -6,6 +6,19 @@ import com.heartbeatmusic.terminal.TerminalMode
 import javax.inject.Inject
 
 class JamendoRepository @Inject constructor(private val api: JamendoApiService) {
+
+    /** Returns a map of songId → coverUrl for the given IDs. Missing/failed IDs are omitted. */
+    suspend fun fetchCoverUrls(songIds: List<String>): Map<String, String> = runCatching {
+        if (songIds.isEmpty()) return@runCatching emptyMap()
+        val response = api.getTracksByIds(
+            clientId = BuildConfig.JAMENDO_CLIENT_ID,
+            ids = songIds
+        )
+        response.results
+            .filter { it.image.isNotEmpty() }
+            .associate { it.id to it.image }
+    }.getOrElse { emptyMap() }
+
     suspend fun fetchTracksForMode(mode: TerminalMode): List<Song> {
         val params = mode.toJamendoParams()
         val response = api.getTracks(
