@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 private const val TAG = "SessionRepository"
+private const val MAX_SESSIONS = 50
 
 /**
  * Local-first repository for Archive sessions. Reads from Room;
@@ -29,6 +30,16 @@ class SessionRepository(
         dao.upsert(session.toEntity())
         remote.saveSession(session)
             .onFailure { e: Throwable -> Log.w(TAG, "Background sync saveSession failed", e) }
+        trimOldSessions()
+    }
+
+    private suspend fun trimOldSessions() {
+        val toDelete = dao.getIdsToTrim(MAX_SESSIONS)
+        toDelete.forEach { id ->
+            dao.deleteById(id)
+            remote.deleteSession(id)
+                .onFailure { e: Throwable -> Log.w(TAG, "Background sync trim deleteSession failed", e) }
+        }
     }
 
     suspend fun deleteSession(sessionId: String) = withContext(Dispatchers.IO) {

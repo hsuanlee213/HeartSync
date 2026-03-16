@@ -20,5 +20,8 @@ interface SyncSessionDao {
 
     @Query("DELETE FROM sync_sessions")
     suspend fun deleteAll()
+
+    @Query("SELECT id FROM sync_sessions ORDER BY endTimestamp DESC LIMIT -1 OFFSET :keep")
+    suspend fun getIdsToTrim(keep: Int): List<String>
 }
 
