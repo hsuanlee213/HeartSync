@@ -71,6 +71,7 @@ import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.sp
@@ -144,6 +145,7 @@ private fun ArchiveSnackbar(snackbarData: SnackbarData) {
 @Composable
 fun ArchiveScreen(viewModel: ArchiveViewModel) {
     var selectedTab by remember { mutableStateOf(0) }
+    var expandedSessionId by remember { mutableStateOf<String?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val sessions by viewModel.sessions.collectAsStateWithLifecycle(initialValue = emptyList())
     val restoreTokens by viewModel.restoreTokens.collectAsStateWithLifecycle(initialValue = emptyMap())
@@ -168,6 +170,11 @@ fun ArchiveScreen(viewModel: ArchiveViewModel) {
                     0 -> SessionsContent(
                         sessions = sessions,
                         restoreTokens = restoreTokens,
+                        collection = collection,
+                        expandedSessionId = expandedSessionId,
+                        onToggleExpand = { id ->
+                            expandedSessionId = if (expandedSessionId == id) null else id
+                        },
                         viewModel = viewModel,
                         snackbarHostState = snackbarHostState
                     )
@@ -250,10 +257,12 @@ private val SnapThreshold = 40.dp
 private fun SessionsContent(
     sessions: List<SyncSession>,
     restoreTokens: Map<String, Int>,
+    collection: List<CollectionItem>,
+    expandedSessionId: String?,
+    onToggleExpand: (String) -> Unit,
     viewModel: ArchiveViewModel,
     snackbarHostState: SnackbarHostState
 ) {
-    var expandedSessionId by remember { mutableStateOf<String?>(null) }
     var deletingSessionIds by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
@@ -293,11 +302,10 @@ private fun SessionsContent(
             SessionListItemWithReveal(
                 session = session,
                 isExpanded = expandedSessionId == session.id,
-                onToggleExpand = {
-                    expandedSessionId = if (expandedSessionId == session.id) null else session.id
-                },
+                onToggleExpand = { onToggleExpand(session.id) },
                 isDeleting = session.id in deletingSessionIds,
                 onTrashClick = { handleTrashClick(session) },
+                collection = collection,
                 viewModel = viewModel,
                 density = density
             )
@@ -334,22 +342,24 @@ private fun SwipeToRevealContainer(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(12.dp))
         ) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .width(TrashRevealWidth)
-                    .fillMaxHeight()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(SwipeDeleteBg)
-                    .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(12.dp))
-                    .clickable(onClick = onTrashClick),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Delete,
-                    contentDescription = "Delete",
-                    tint = Color.White
-                )
+            if (offsetPx.value < 0f) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .width(TrashRevealWidth)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(SwipeDeleteBg)
+                        .border(1.dp, SwipeDeleteBorder, RoundedCornerShape(12.dp))
+                        .clickable(onClick = onTrashClick),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.White
+                    )
+                }
             }
 
             Box(
@@ -407,11 +417,12 @@ private fun SessionListItemWithReveal(
     onToggleExpand: () -> Unit,
     isDeleting: Boolean,
     onTrashClick: () -> Unit,
+    collection: List<CollectionItem>,
     viewModel: ArchiveViewModel,
     density: androidx.compose.ui.unit.Density
 ) {
     SwipeToRevealContainer(isDeleting, onTrashClick, density) {
-        SessionCard(session = session, isExpanded = isExpanded, onToggleExpand = onToggleExpand, viewModel = viewModel)
+        SessionCard(session = session, isExpanded = isExpanded, onToggleExpand = onToggleExpand, collection = collection, viewModel = viewModel)
     }
 }
 
@@ -428,6 +439,7 @@ private fun SessionCard(
     session: SyncSession,
     isExpanded: Boolean,
     onToggleExpand: () -> Unit,
+    collection: List<CollectionItem>,
     viewModel: ArchiveViewModel
 ) {
     val shortId = session.id.takeLast(8).uppercase()
@@ -507,6 +519,7 @@ private fun SessionCard(
                         title = title,
                         artist = artist,
                         mode = session.mode,
+                        isInCollection = collection.any { it.songId == id && it.mode == session.mode },
                         viewModel = viewModel
                     )
                 }
@@ -536,6 +549,7 @@ private fun SessionSongItem(
     title: String,
     artist: String,
     mode: String,
+    isInCollection: Boolean,
     viewModel: ArchiveViewModel
 ) {
     Box(
@@ -553,16 +567,26 @@ private fun SessionSongItem(
         ) {
             Text(
                 text = title.ifEmpty { "Unknown" },
-                style = expandedTextStyle
+                style = expandedTextStyle,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f)
             )
+            Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "+ COLLECTION",
-                style = expandedButtonStyle,
+                text = if (isInCollection) "✓ ADDED" else "+ COLLECTION",
+                style = expandedButtonStyle.copy(
+                    color = if (isInCollection) Color.Green.copy(alpha = 0.8f) else CyanText
+                ),
                 modifier = Modifier.clickable(
                     indication = null,
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {
-                        viewModel.addToCollection(songId, title, artist, mode)
+                        if (isInCollection) {
+                            viewModel.removeFromCollection(songId, mode)
+                        } else {
+                            viewModel.addToCollection(songId, title, artist, mode)
+                        }
                     }
                 )
             )
