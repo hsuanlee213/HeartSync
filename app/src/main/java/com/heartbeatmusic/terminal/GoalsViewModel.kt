@@ -12,6 +12,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -37,17 +38,32 @@ class GoalsViewModel @Inject constructor(
     private val _achievements = MutableStateFlow<List<Achievement>>(emptyList())
     val achievements: StateFlow<List<Achievement>> = _achievements.asStateFlow()
 
+    private var loadedDate: String? = null
+    private var goalsJob: Job? = null
+    private var achievementsJob: Job? = null
+
     init {
+        refreshIfDateChanged()
+    }
+
+    /**
+     * Refresh goals when date changes (e.g. app brought to foreground on a new day).
+     * Call from GoalsFragment.onResume() so user sees new tasks without restarting the app.
+     */
+    fun refreshIfDateChanged() {
         val today = LocalDate.now().format(DATE_FORMAT)
-        val userId = firebaseAuth.currentUser?.uid
-        if (userId != null) {
-            dailyGoalRepository.todayGoalsFlow(userId, today)
-                .onEach { _todayGoals.value = it }
-                .launchIn(viewModelScope)
-            achievementRepository.achievementsFlow(userId)
-                .onEach { _achievements.value = it }
-                .launchIn(viewModelScope)
-        }
+        if (loadedDate == today) return
+        loadedDate = today
+
+        val userId = firebaseAuth.currentUser?.uid ?: return
+        goalsJob?.cancel()
+        achievementsJob?.cancel()
+        goalsJob = dailyGoalRepository.todayGoalsFlow(userId, today)
+            .onEach { _todayGoals.value = it }
+            .launchIn(viewModelScope)
+        achievementsJob = achievementRepository.achievementsFlow(userId)
+            .onEach { _achievements.value = it }
+            .launchIn(viewModelScope)
         viewModelScope.launch(Dispatchers.IO) {
             generateTodayGoalsIfNeeded(today)
             ensureLastMonthAchievementRecorded(today)

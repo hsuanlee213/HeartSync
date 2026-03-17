@@ -29,4 +29,9 @@ class GoalsFragment : Fragment() {
             GoalsScreen(viewModel = viewModel)
         }
     }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshIfDateChanged()
+    }
 }
