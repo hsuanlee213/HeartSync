@@ -67,6 +67,7 @@ class GoalsViewModel @Inject constructor(
         viewModelScope.launch(Dispatchers.IO) {
             generateTodayGoalsIfNeeded(today)
             ensureLastMonthAchievementRecorded(today)
+            ensureCurrentMonthAchievementRecorded(today)
         }
     }
 
@@ -87,6 +88,29 @@ class GoalsViewModel @Inject constructor(
                 userId = userId,
                 year = lastMonth.year,
                 month = lastMonth.monthValue,
+                completedCount = completed,
+                totalCount = goals.size
+            )
+        )
+    }
+
+    /**
+     * Update current month's achievement (totalCount grows each day; fixes denominator stuck at 2).
+     * Also creates new month's achievement on first day of month (e.g. April 2026 0/2).
+     */
+    private suspend fun ensureCurrentMonthAchievementRecorded(today: String) {
+        val userId = firebaseAuth.currentUser?.uid ?: return
+        val current = LocalDate.parse(today)
+        val yearMonth = "${current.year}-${current.monthValue.toString().padStart(2, '0')}"
+        val goals = dailyGoalRepository.getGoalsByMonth(userId, yearMonth)
+        if (goals.isEmpty()) return
+        val completed = goals.count { it.isCompleted }
+        achievementRepository.insertAchievement(
+            Achievement(
+                id = "${userId}_$yearMonth",
+                userId = userId,
+                year = current.year,
+                month = current.monthValue,
                 completedCount = completed,
                 totalCount = goals.size
             )
