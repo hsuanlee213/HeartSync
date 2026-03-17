@@ -27,7 +27,8 @@ private val DATE_FORMAT = DateTimeFormatter.ISO_LOCAL_DATE  // "2026-03-16"
 @HiltViewModel
 class GoalsViewModel @Inject constructor(
     private val dailyGoalRepository: DailyGoalRepository,
-    private val achievementRepository: AchievementRepository
+    private val achievementRepository: AchievementRepository,
+    private val firebaseAuth: FirebaseAuth
 ) : ViewModel() {
 
     private val _todayGoals = MutableStateFlow<List<DailyGoal>>(emptyList())
@@ -38,7 +39,7 @@ class GoalsViewModel @Inject constructor(
 
     init {
         val today = LocalDate.now().format(DATE_FORMAT)
-        val userId = FirebaseAuth.getInstance().currentUser?.uid
+        val userId = firebaseAuth.currentUser?.uid
         if (userId != null) {
             dailyGoalRepository.todayGoalsFlow(userId, today)
                 .onEach { _todayGoals.value = it }
@@ -58,7 +59,7 @@ class GoalsViewModel @Inject constructor(
      * Count completed/total goals for the previous month and insert or update AchievementEntity.
      */
     private suspend fun ensureLastMonthAchievementRecorded(today: String) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userId = firebaseAuth.currentUser?.uid ?: return
         val lastMonth = LocalDate.parse(today).minusMonths(1)
         val yearMonth = "${lastMonth.year}-${lastMonth.monthValue.toString().padStart(2, '0')}"
         val goals = dailyGoalRepository.getGoalsByMonth(userId, yearMonth)
@@ -77,7 +78,7 @@ class GoalsViewModel @Inject constructor(
     }
 
     private suspend fun generateTodayGoalsIfNeeded(today: String) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userId = firebaseAuth.currentUser?.uid ?: return
         val existing = dailyGoalRepository.getGoalsByDate(userId, today)
         if (existing.isNotEmpty()) return
 

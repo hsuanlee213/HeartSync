@@ -86,7 +86,8 @@ class HeartSyncViewModel @Inject constructor(
     private val collectionRepository: CollectionRepository,
     private val sessionRepository: SessionRepository,
     private val dailyGoalRepository: DailyGoalRepository,
-    private val achievementRepository: AchievementRepository
+    private val achievementRepository: AchievementRepository,
+    private val firebaseAuth: FirebaseAuth
 ) : AndroidViewModel(application) {
 
     private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
@@ -417,7 +418,7 @@ class HeartSyncViewModel @Inject constructor(
     fun autoSaveSession() {
         val start = sessionStartTime ?: return
         val mode = sessionMode ?: return
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val uid = firebaseAuth.currentUser?.uid ?: return
         val songs = sessionSongs.toList()
         if (songs.isEmpty()) return
         val endTime = System.currentTimeMillis()
@@ -466,7 +467,7 @@ class HeartSyncViewModel @Inject constructor(
      * When accumulatedSeconds >= targetMinutes * 60, mark goal completed and trigger monthly achievement check.
      */
     private suspend fun accumulateGoalProgress() {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userId = firebaseAuth.currentUser?.uid ?: return
         val playingMode = _playingMode.value ?: return
         if (!player.isPlaying) return
 
@@ -493,7 +494,7 @@ class HeartSyncViewModel @Inject constructor(
 
     /** Upsert achievement record for a given month (yearMonth = "2026-03"). */
     private suspend fun recordAchievementForMonth(yearMonth: String) {
-        val userId = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val userId = firebaseAuth.currentUser?.uid ?: return
         val goals = dailyGoalRepository.getGoalsByMonth(userId, yearMonth)
         if (goals.isEmpty()) return
         val completed = goals.count { it.isCompleted }

@@ -1,6 +1,7 @@
 package com.heartbeatmusic.di
 
 import android.content.Context
+import com.google.firebase.auth.FirebaseAuth
 import com.heartbeatmusic.data.local.AchievementRepository
 import com.heartbeatmusic.data.local.AvatarRepository
 import com.heartbeatmusic.data.local.CollectionRepository
@@ -23,6 +24,10 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object AppModule {
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
 
     @Provides
     @Singleton
