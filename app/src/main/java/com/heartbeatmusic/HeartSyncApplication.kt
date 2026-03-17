@@ -5,7 +5,7 @@ import com.heartbeatmusic.player.MusicDiscoveryPlayer
 import dagger.hilt.android.HiltAndroidApp
 
 @HiltAndroidApp
-class HeartBeatMusicApplication : Application() {
+class HeartSyncApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         MusicDiscoveryPlayer.init(this)

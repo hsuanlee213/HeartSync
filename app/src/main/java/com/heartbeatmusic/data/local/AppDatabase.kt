@@ -36,7 +36,7 @@ abstract class AppDatabase : RoomDatabase() {
             Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
-                "heartbeat_db"
+                "heartsync_db"
             )
                 // v1 -> v2: add SyncSession table
                 // v2 -> v3: add UserProfile table (avatar local/remote)

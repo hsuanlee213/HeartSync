@@ -7,7 +7,7 @@
 ### 1. 建立新 Firebase 專案
 
 1. 前往 [Firebase Console](https://console.firebase.google.com/)
-2. 點「新增專案」，命名（例如 `heartbeat-music`）
+2. 點「新增專案」，命名（例如 `heartsync`）
 3. 依需要啟用 Google Analytics（可選）
 
 ### 2. 在專案中新增 Android 應用

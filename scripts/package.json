@@ -1,7 +1,7 @@
 {
-  "name": "heartbeat-music-firebase-scripts",
+  "name": "heartsync-firebase-scripts",
   "version": "1.0.0",
-  "description": "Deploy Firestore rules and seed data for HeartBeat Music",
+  "description": "Deploy Firestore rules and seed data for Heart Sync",
   "private": true,
   "scripts": {
     "seed": "node seed-firestore.js"

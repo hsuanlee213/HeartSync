@@ -1,5 +1,5 @@
 /**
- * HeartBeat Music - Firestore 種子資料腳本
+ * Heart Sync - Firestore 種子資料腳本
  * 使用方式：在 scripts/ 目錄下執行 node seed-firestore.js
  * 需先將服務帳戶金鑰存成 serviceAccountKey.json（見 docs/FIREBASE_SCRIPTS_STEPS.md）
  */
@@ -34,7 +34,7 @@ async function seedSongs() {
     {
       docId: 'sample1',
       title: 'Sample Calm Track',
-      artist: 'HeartBeat Music',
+      artist: 'Heart Sync',
       bpm: 72,
       durationSec: 120,
       genre: 'Ambient',
@@ -46,7 +46,7 @@ async function seedSongs() {
     {
       docId: 'sample2',
       title: 'Sample Exercise Track',
-      artist: 'HeartBeat Music',
+      artist: 'Heart Sync',
       bpm: 128,
       durationSec: 180,
       genre: 'Pop',
