@@ -1,16 +1,6 @@
 <resources>
     <string name="app_name">HeartSync</string>
     <string name="profile_icon_desc">User Profile Icon</string>
-    <string name="play_button_desc">Play Button</string>
-    <string name="title_music_library">Music Library</string>
-    <string name="no_songs_available">No songs available. Run seed script to add music.</string>
-    <!-- Yuchen - Added for registration -->
-    <string-array name="fitness_levels">
-        <item>Beginner</item>
-        <item>Intermediate</item>
-        <item>Advanced</item>
-    </string-array>
-    <!-- Yuchen - End -->
     <string-array name="energy_levels">
         <item>1 - Zen</item>
         <item>2 - Chill</item>
