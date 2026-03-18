@@ -90,6 +90,8 @@ class HeartSyncViewModel @Inject constructor(
     private val firebaseAuth: FirebaseAuth
 ) : AndroidViewModel(application) {
 
+    private val prefs = application.getSharedPreferences("UserPrefs", android.content.Context.MODE_PRIVATE)
+
     private val _currentMode = MutableStateFlow(TerminalMode.SYNC)
     val currentMode: StateFlow<TerminalMode> = _currentMode.asStateFlow()
 
@@ -229,6 +231,7 @@ class HeartSyncViewModel @Inject constructor(
                                 val coverUrl = mediaItem.mediaMetadata.artworkUri?.toString() ?: ""
                                 if (title.isNotEmpty() && sessionSongs.none { it.id == songId }) {
                                     sessionSongs.add(SongEntry(songId, title, artist, coverUrl))
+                                    autoSaveSession()
                                 }
                             }
                         }
@@ -279,10 +282,10 @@ class HeartSyncViewModel @Inject constructor(
                             val coverUrl = md?.artworkUri?.toString() ?: ""
                             if (title.isNotEmpty() && sessionSongs.none { it.id == songId }) {
                                 sessionSongs.add(SongEntry(songId, title, artist, coverUrl))
+                                autoSaveSession()
                             }
                         }
                     }
-                }
             }
         })
     }
@@ -418,8 +421,22 @@ class HeartSyncViewModel @Inject constructor(
     fun autoSaveSession() {
         val start = sessionStartTime ?: return
         val mode = sessionMode ?: return
-        val uid = firebaseAuth.currentUser?.uid ?: return
-        val songs = sessionSongs.toList()
+        val uid = firebaseAuth.currentUser?.uid ?: prefs.getString("user_id", null) ?: return
+        var songs = sessionSongs.toList()
+        if (songs.isEmpty()) {
+            val mediaItem = player.currentMediaItem
+            if (mediaItem != null) {
+                val songId = mediaItem.mediaId.takeIf { it?.isNotEmpty() == true } ?: ""
+                val title = mediaItem.mediaMetadata.title?.toString() ?: _displayTitle.value.ifEmpty { _currentTrackTitle.value }
+                val artist = mediaItem.mediaMetadata.artist?.toString() ?: _displayArtist.value.ifEmpty { _currentTrackArtist.value }
+                val coverUrl = mediaItem.mediaMetadata.artworkUri?.toString() ?: ""
+                if (title.isNotEmpty()) {
+                    val entry = SongEntry(songId, title, artist, coverUrl)
+                    if (sessionSongs.none { it.id == songId }) sessionSongs.add(entry)
+                    songs = listOf(entry)
+                }
+            }
+        }
         if (songs.isEmpty()) return
         val endTime = System.currentTimeMillis()
         val durationMinutes = ((endTime - start) / 60_000).toInt().coerceAtLeast(0)

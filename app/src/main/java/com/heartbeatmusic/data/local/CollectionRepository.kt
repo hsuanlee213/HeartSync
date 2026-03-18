@@ -7,6 +7,7 @@ import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.data.remote.JamendoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
@@ -59,12 +60,15 @@ class CollectionRepository(
             .onFailure { Log.w(TAG, "Background sync remove failed", it) }
     }
 
-    /** Pull Firestore collection once and replace local DB (e.g. on login or app start).
-     *  Any items missing a coverUrl are backfilled via a single Jamendo batch lookup. */
+    /**
+     * Pull Firestore collection into local DB only when local is empty (e.g. new device, first login).
+     * Do NOT overwrite local when it has data — local is source of truth.
+     */
     suspend fun syncFromFirestore() = withContext(Dispatchers.IO) {
-        val list = remote.getCollectionOnce()
+        val localItems = dao.getAllFlow().first()
+        if (localItems.isNotEmpty()) return@withContext
 
-        // Backfill cover URLs for items that were saved before cover tracking was added.
+        val list = remote.getCollectionOnce()
         val missingCoverIds = list.filter { it.coverUrl.isEmpty() }.map { it.songId }
         val coverMap = if (missingCoverIds.isNotEmpty()) {
             jamendo.fetchCoverUrls(missingCoverIds)
@@ -81,10 +85,8 @@ class CollectionRepository(
             }
         }
 
-        dao.deleteAll()
         enriched.forEach { item -> dao.insert(item.toEntity()) }
 
-        // Persist backfilled cover URLs back to Firestore so future syncs don't need to re-fetch.
         enriched.filter { it.coverUrl.isNotEmpty() }.forEach { item ->
             remote.addToCollection(item.songId, item.title, item.artist, item.mode, item.coverUrl, item.addedAt)
                 .onFailure { Log.w(TAG, "Cover URL backfill Firestore write failed for ${item.songId}", it) }

@@ -48,12 +48,14 @@ class SessionRepository(
             .onFailure { e: Throwable -> Log.w(TAG, "Background sync deleteSession failed", e) }
     }
 
-    /** Pull Firestore sessions once and replace local DB (e.g. on app start). */
+    /**
+     * Pull Firestore sessions into local DB only when local is empty (e.g. new device, first login).
+     * Do NOT overwrite local when it has data — local is source of truth; Firestore sync is async.
+     */
     suspend fun syncFromFirestore() = withContext(Dispatchers.IO) {
-        // Read once from Firestore via the existing snapshot listener flow.
-        // This avoids tight coupling to a specific one-shot API and keeps behavior consistent.
+        val localSessions = dao.getAllFlow().first()
+        if (localSessions.isNotEmpty()) return@withContext
         val list = remote.sessionsFlow().first()
-        dao.deleteAll()
         list.forEach { session: SyncSession -> dao.upsert(session.toEntity()) }
     }
 }
