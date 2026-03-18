@@ -135,6 +135,11 @@ class UserProfileActivity : AppCompatActivity() {
             .remove("username")
             .remove("email")
             .apply()
+        PlayerHolder.getInstance(this).player.apply {
+            stop()
+            clearMediaItems()
+        }
+        stopService(Intent(this, PlayerService::class.java))
         startActivity(Intent(this, LoginActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         })
