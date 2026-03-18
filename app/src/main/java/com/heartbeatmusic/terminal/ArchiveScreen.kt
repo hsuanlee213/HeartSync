@@ -206,7 +206,7 @@ private fun TabRow(
             .padding(horizontal = 16.dp, vertical = 12.dp),
         horizontalArrangement = Arrangement.spacedBy(24.dp)
     ) {
-        listOf("SESSIONS", "COLLECTION").forEachIndexed { index, label ->
+        listOf("SESSIONS", "COLLECTIONS").forEachIndexed { index, label ->
             val isSelected = selectedTab == index
             Tab(
                 label = label,
@@ -571,7 +571,7 @@ private fun SessionSongItem(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = if (isInCollection) "✓ ADDED" else "+ COLLECTION",
+                text = if (isInCollection) "✓ ADDED" else "+ COLLECTIONS",
                 style = expandedButtonStyle.copy(
                     color = if (isInCollection) Color.Green.copy(alpha = 0.8f) else CyanText
                 ),
@@ -615,7 +615,7 @@ private fun CollectionContent(
             // even if the user switches tabs and this coroutine scope is later cancelled.
             viewModel.removeFromCollectionUI(item)
             val result = snackbarHostState.showSnackbar(
-                message = "Song removed from collection",
+                message = "Song removed from collections",
                 actionLabel = "UNDO",
                 duration = SnackbarDuration.Long
             )

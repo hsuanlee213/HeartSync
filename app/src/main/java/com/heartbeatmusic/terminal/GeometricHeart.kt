@@ -520,7 +520,7 @@ private fun ExpandedPanel(
                 ) {
                     Icon(
                         imageVector = if (isInCollection) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
-                        contentDescription = if (isInCollection) "Remove from collection" else "Add to collection",
+                        contentDescription = if (isInCollection) "Remove from collections" else "Add to collections",
                         tint = accentColor
                     )
                 }
