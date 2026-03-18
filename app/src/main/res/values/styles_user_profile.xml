@@ -47,6 +47,15 @@
         <item name="endIconTint">@color/tech_cyan</item>
     </style>
 
+    <!-- Homepage-style button: cyan border, transparent fill, cyan text (keep oval) -->
+    <style name="TechLoginButton" parent="Widget.Material3.Button.OutlinedButton">
+        <item name="android:textColor">@color/tech_cyan</item>
+        <item name="strokeColor">@color/tech_cyan</item>
+        <item name="strokeWidth">2dp</item>
+        <item name="backgroundTint">@android:color/transparent</item>
+        <item name="cornerRadius">28dp</item>
+    </style>
+
     <!-- Change Password dialog theme -->
     <style name="TechDialogTheme" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
         <item name="colorSurface">@color/tech_bg_dark</item>

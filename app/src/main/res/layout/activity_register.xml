@@ -178,13 +178,13 @@
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
-                <!-- Register Button -->
-                <Button
+                <!-- Create Account Button - homepage style: cyan border, transparent fill -->
+                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_create_account"
                     android:layout_width="match_parent"
                     android:layout_height="56dp"
                     android:text="Create Account"
-                    style="@style/Widget.Material3.Button"
+                    style="@style/TechLoginButton"
                     android:layout_marginTop="28dp"/>
 
             </LinearLayout>

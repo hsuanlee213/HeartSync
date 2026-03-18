@@ -95,15 +95,15 @@
                     android:textColor="@color/white"/>
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Sign In Button -->
-            <Button
+            <!-- Sign In Button - homepage style: cyan border, transparent fill -->
+            <com.google.android.material.button.MaterialButton
                 android:layout_marginTop="8dp"
                 android:id="@+id/btn_sign_in"
                 android:layout_width="match_parent"
                 android:layout_height="56dp"
                 android:text="Sign In"
                 android:textSize="16sp"
-                style="@style/Widget.Material3.Button"/>
+                style="@style/TechLoginButton"/>
 
             <!-- Forgot Password (Optional) -->
             <TextView
