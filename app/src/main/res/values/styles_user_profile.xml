@@ -11,6 +11,31 @@
         <item name="startIconTint">@color/tech_cyan</item>
     </style>
 
+    <!-- Holographic-style TextInputLayout for Login / Create Account -->
+    <style name="TechLoginInputLayout" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox">
+        <item name="boxBackgroundColor">@color/tech_input_bg_dark</item>
+        <item name="boxBackgroundMode">outline</item>
+        <item name="boxStrokeColor">@color/tech_stroke_color</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextColor">@color/tech_label_light</item>
+        <item name="android:textColorHint">@color/tech_label_light</item>
+        <item name="helperTextTextColor">@color/tech_label_light</item>
+        <item name="cursorColor">@color/tech_cyan</item>
+        <item name="endIconTint">@color/tech_password_toggle_tint</item>
+    </style>
+
+    <!-- Holographic dropdown for Create Account Energy Level -->
+    <style name="TechLoginInputLayoutDropdown" parent="Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu">
+        <item name="boxBackgroundColor">@color/tech_input_bg_dark</item>
+        <item name="boxBackgroundMode">outline</item>
+        <item name="boxStrokeColor">@color/tech_stroke_color</item>
+        <item name="boxStrokeWidth">1dp</item>
+        <item name="hintTextColor">@color/tech_label_light</item>
+        <item name="android:textColorHint">@color/tech_label_light</item>
+        <item name="cursorColor">@color/tech_cyan</item>
+        <item name="endIconTint">@color/tech_label_light</item>
+    </style>
+
     <!-- Tech style for dialog password fields -->
     <style name="TechTextInputLayoutDialog" parent="Widget.MaterialComponents.TextInputLayout.FilledBox">
         <item name="boxBackgroundColor">@color/tech_input_bg_transparent</item>

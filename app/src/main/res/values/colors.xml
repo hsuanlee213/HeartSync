@@ -12,6 +12,9 @@
     <color name="tech_stroke_default">#4D4D4D</color>
     <color name="tech_cyan_border">#4D00FFFF</color>
     <color name="tech_input_bg_transparent">#00000000</color>
+    <color name="tech_input_bg_dark">#FF2D2A35</color>
+    <color name="tech_label_light">#E6E6E6</color>
+    <color name="tech_icon_gray">#B3B3B3</color>
     <color name="sync_engine_label">#E0E0E0</color>
     <!-- Goals sliders palette -->
     <color name="goals_cyan">#00FFFF</color> <!-- reuse tech_cyan for clarity -->

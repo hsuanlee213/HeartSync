@@ -46,12 +46,13 @@
             android:alpha="0.8"
             android:layout_marginBottom="32dp"/>
 
-        <!-- Registration Form Card -->
+        <!-- Registration Form Card - transparent, inputs float on deep purple -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             app:cardCornerRadius="16dp"
-            app:cardElevation="4dp">
+            app:cardElevation="0dp"
+            app:cardBackgroundColor="@android:color/transparent">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -64,7 +65,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="User Email"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    style="@style/TechLoginInputLayout"
                     android:layout_marginTop="4dp"
                     android:layout_marginBottom="12dp">
 
@@ -72,7 +73,8 @@
                         android:id="@+id/et_reg_email"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textEmailAddress"/>
+                        android:inputType="textEmailAddress"
+                        android:textColor="@color/white"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Password -->
@@ -80,7 +82,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:hint="Password"
-                    style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                    style="@style/TechLoginInputLayout"
                     app:passwordToggleEnabled="true"
                     android:layout_marginTop="8dp"
                     android:layout_marginBottom="12dp">
@@ -89,7 +91,8 @@
                         android:id="@+id/et_reg_password"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:inputType="textPassword"/>
+                        android:inputType="textPassword"
+                        android:textColor="@color/white"/>
                 </com.google.android.material.textfield.TextInputLayout>
 
                 <!-- Personal Information Section -->
@@ -99,6 +102,7 @@
                     android:text="Personal Information (Optional)"
                     android:textSize="14sp"
                     android:textStyle="bold"
+                    android:textColor="@color/tech_label_light"
                     android:layout_marginTop="16dp"
                     android:layout_marginBottom="12dp"/>
 
@@ -118,7 +122,7 @@
                         android:layout_weight="1"
                         android:hint="Age"
                         app:placeholderText="25"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        style="@style/TechLoginInputLayout"
                         android:layout_marginTop="8dp"
                         android:layout_marginEnd="8dp">
 
@@ -126,7 +130,8 @@
                             android:id="@+id/et_age"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"/>
+                            android:inputType="number"
+                            android:textColor="@color/white"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- RHR (Resting BPM) - optional, default 70 -->
@@ -139,7 +144,7 @@
                         app:placeholderText="70"
                         app:helperText="Range: 40 - 100 BPM"
                         app:helperTextEnabled="true"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        style="@style/TechLoginInputLayout"
                         android:layout_marginTop="8dp"
                         android:layout_marginEnd="8dp">
 
@@ -147,7 +152,8 @@
                             android:id="@+id/et_weight"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
-                            android:inputType="number"/>
+                            android:inputType="number"
+                            android:textColor="@color/white"/>
                     </com.google.android.material.textfield.TextInputLayout>
 
                     <!-- Energy Level (optional, narrow width, shows number only when collapsed) -->
@@ -156,7 +162,7 @@
                         android:layout_width="80dp"
                         android:layout_height="wrap_content"
                         android:hint="Energy Level"
-                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                        style="@style/TechLoginInputLayoutDropdown"
                         android:layout_marginTop="8dp">
 
                         <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -167,7 +173,8 @@
                             android:focusable="true"
                             android:focusableInTouchMode="false"
                             android:clickable="true"
-                            android:minHeight="48dp"/>
+                            android:minHeight="48dp"
+                            android:textColor="@color/white"/>
                     </com.google.android.material.textfield.TextInputLayout>
                 </LinearLayout>
 
