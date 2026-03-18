@@ -286,6 +286,7 @@ class HeartSyncViewModel @Inject constructor(
                             }
                         }
                     }
+                }
             }
         })
     }
