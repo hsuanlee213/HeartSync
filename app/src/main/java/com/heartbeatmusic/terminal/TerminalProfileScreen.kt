@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -31,6 +32,8 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -54,6 +57,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.platform.LocalContext
 import android.widget.Toast
 import coil.compose.AsyncImage
@@ -83,11 +88,12 @@ fun TerminalProfileScreen(
     onBack: () -> Unit,
     onChangePassword: () -> Unit,
     onLogout: () -> Unit,
+    onChangeUsername: ((String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     navController: NavController? = null,
     avatarViewModel: UserAvatarViewModel = viewModel()
 ) {
-    var showDialog by remember { mutableStateOf(false) }
+    var showEditUsernameDialog by remember { mutableStateOf(false) }
     var pendingAvatarUri by remember { mutableStateOf<Uri?>(null) }
     val avatarState by avatarViewModel.uiState.collectAsState()
     val context = LocalContext.current
@@ -189,12 +195,29 @@ fun TerminalProfileScreen(
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = username.ifEmpty { "User" },
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = NeonCyan
-                )
+                Row(
+                    modifier = if (onChangeUsername != null) {
+                        Modifier.clickable { showEditUsernameDialog = true }
+                    } else Modifier,
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = username.ifEmpty { "User" },
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonCyan
+                    )
+                    if (onChangeUsername != null) {
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit username",
+                            tint = NeonCyan,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = email.ifEmpty { "—" },
@@ -211,10 +234,7 @@ fun TerminalProfileScreen(
                     modifier = if (canChangePassword) {
                         Modifier
                             .fillMaxWidth()
-                            .clickable {
-                                showDialog = true
-                                onChangePassword()
-                            }
+                            .clickable(onClick = onChangePassword)
                             .padding(16.dp)
                     } else {
                         Modifier.fillMaxWidth().padding(16.dp)
@@ -303,6 +323,66 @@ fun TerminalProfileScreen(
             },
             dismissButton = {
                 TextButton(onClick = { pendingAvatarUri = null }) { Text("Cancel") }
+            },
+            containerColor = ProfileBackgroundDeepPurple
+        )
+    }
+
+    if (showEditUsernameDialog && onChangeUsername != null) {
+        var editText by remember(username) { mutableStateOf(username.ifEmpty { "User" }) }
+        var errorMessage by remember { mutableStateOf<String?>(null) }
+        AlertDialog(
+            onDismissRequest = {
+                showEditUsernameDialog = false
+                errorMessage = null
+            },
+            title = { Text(text = "Edit Username", color = NeonCyan) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    OutlinedTextField(
+                        value = editText,
+                        onValueChange = {
+                            editText = it
+                            errorMessage = null
+                        },
+                        label = { Text("Username", color = TextSecondary) },
+                        singleLine = true,
+                        isError = errorMessage != null,
+                        supportingText = errorMessage?.let { { Text(it, color = NeonRed) } },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White,
+                            focusedBorderColor = NeonCyan,
+                            unfocusedBorderColor = TextSecondary,
+                            focusedLabelColor = NeonCyan,
+                            unfocusedLabelColor = TextSecondary,
+                            cursorColor = NeonCyan,
+                            errorBorderColor = NeonRed
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val trimmed = editText.trim()
+                        when {
+                            trimmed.isEmpty() -> errorMessage = "Username cannot be empty"
+                            else -> {
+                                onChangeUsername(trimmed)
+                                showEditUsernameDialog = false
+                                Toast.makeText(context, "Username updated", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                ) { Text("Save", color = NeonCyan) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showEditUsernameDialog = false }) {
+                    Text("Cancel", color = TextSecondary)
+                }
             },
             containerColor = ProfileBackgroundDeepPurple
         )

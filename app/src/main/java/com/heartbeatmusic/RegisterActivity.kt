@@ -22,6 +22,7 @@ import dagger.hilt.android.AndroidEntryPoint
 @AndroidEntryPoint
 class RegisterActivity : AppCompatActivity() {
 
+    private lateinit var etUsername: EditText
     private lateinit var etEmail: EditText
     private lateinit var etPassword: EditText
     private lateinit var etAge: EditText
@@ -42,6 +43,7 @@ class RegisterActivity : AppCompatActivity() {
         db = FirebaseFirestore.getInstance()
         prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
 
+        etUsername = findViewById(R.id.et_reg_username)
         etEmail = findViewById(R.id.et_reg_email)
         etPassword = findViewById(R.id.et_reg_password)
         etAge = findViewById(R.id.et_age)
@@ -65,9 +67,18 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun validateInputs(): Boolean {
-        if (etEmail.text.toString().trim().isEmpty() || etPassword.text.toString().trim().isEmpty()) {
-            Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show()
-            return false
+        val username = etUsername.text.toString().trim()
+        val email = etEmail.text.toString().trim()
+        val password = etPassword.text.toString().trim()
+        when {
+            username.isEmpty() -> {
+                Toast.makeText(this, "Please enter a username", Toast.LENGTH_SHORT).show()
+                return false
+            }
+            email.isEmpty() || password.isEmpty() -> {
+                Toast.makeText(this, "Please fill all required fields", Toast.LENGTH_SHORT).show()
+                return false
+            }
         }
         return true
     }
@@ -87,6 +98,7 @@ class RegisterActivity : AppCompatActivity() {
     }
 
     private fun saveUserProfile(user: FirebaseUser) {
+        val username = etUsername.text.toString().trim().ifEmpty { "User" }
         val ageStr = etAge.text.toString().trim()
         val weightStr = etWeight.text.toString().trim()
         val energyLevelStr = dropdownEnergyLevel.text.toString().trim()
@@ -98,6 +110,7 @@ class RegisterActivity : AppCompatActivity() {
         )
 
         val profileData = mapOf(
+            "username" to username,
             "email" to user.email,
             "age" to ageStr,
             "weight" to weightStr,
@@ -117,6 +130,7 @@ class RegisterActivity : AppCompatActivity() {
 
                 prefs.edit()
                     .putString("user_id", user.uid)
+                    .putString("username", username)
                     .putString("email", user.email)
                     .apply()
 

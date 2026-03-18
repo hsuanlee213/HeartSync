@@ -13,7 +13,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.android.material.textfield.TextInputEditText
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.EmailAuthProvider
@@ -31,6 +37,7 @@ class UserProfileActivity : AppCompatActivity() {
 
     private lateinit var auth: FirebaseAuth
     private lateinit var prefs: SharedPreferences
+    private lateinit var db: FirebaseFirestore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,13 +45,15 @@ class UserProfileActivity : AppCompatActivity() {
 
         auth = FirebaseAuth.getInstance()
         prefs = getSharedPreferences("UserPrefs", MODE_PRIVATE)
+        db = FirebaseFirestore.getInstance()
 
         val user = auth.currentUser
         val email = user?.email ?: "N/A"
-        val username = prefs.getString("username", "User") ?: "User"
+        val initialUsername = prefs.getString("username", "User") ?: "User"
         val canChangePassword = user != null && user.email != null && email != "N/A"
 
         setContent {
+            var username by remember { mutableStateOf(initialUsername) }
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     TerminalProfileScreen(
@@ -53,11 +62,30 @@ class UserProfileActivity : AppCompatActivity() {
                         canChangePassword = canChangePassword,
                         onBack = { finish() },
                         onChangePassword = { showChangePasswordDialog() },
-                        onLogout = { performLogout() }
+                        onLogout = { performLogout() },
+                        onChangeUsername = { newUsername ->
+                            user?.let {
+                                updateUsername(it.uid, newUsername) { username = newUsername }
+                            }
+                        }
                     )
                 }
             }
         }
+    }
+
+    private fun updateUsername(uid: String, newUsername: String, onSuccess: () -> Unit = {}) {
+        db.collection("users").document(uid)
+            .set(mapOf("username" to newUsername), SetOptions.merge())
+            .addOnSuccessListener {
+                prefs.edit().putString("username", newUsername).apply()
+                Log.d(TAG, "Username updated successfully")
+                onSuccess()
+            }
+            .addOnFailureListener { e ->
+                Log.e(TAG, "Failed to update username", e)
+                Toast.makeText(this, "Failed to update username. Please try again.", Toast.LENGTH_SHORT).show()
+            }
     }
 
     private fun showChangePasswordDialog() {
