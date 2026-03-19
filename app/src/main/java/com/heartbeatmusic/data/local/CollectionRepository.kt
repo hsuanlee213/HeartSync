@@ -34,7 +34,8 @@ class CollectionRepository(
     fun collectionFlow(): Flow<List<CollectionItem>> =
         dao.getAllFlow().map { list -> list.map { it.toCollectionItem() } }
 
-    /** Add item to local DB, then sync to Firestore on IO dispatcher. Local is source of truth. */
+    /** Add item to local DB, then sync to Firestore on IO dispatcher. Local is source of truth.
+     *  If song already exists in another mode, removes old entry first so each song appears only once. */
     suspend fun addToCollection(
         songId: String,
         title: String,
@@ -43,6 +44,9 @@ class CollectionRepository(
         coverUrl: String = "",
         addedAt: Long = System.currentTimeMillis()
     ) = withContext(Dispatchers.IO) {
+        dao.deleteBySongId(songId)
+        remote.removeAllBySongId(songId)
+            .onFailure { Log.w(TAG, "removeAllBySongId failed (may not be logged in)", it) }
         val id = "${songId}_${mode}"
         dao.insert(
             CollectionItemEntity(
@@ -65,6 +69,14 @@ class CollectionRepository(
         dao.deleteBySongIdAndMode(songId, mode)
         remote.removeFromCollection(songId, mode)
             .onFailure { Log.w(TAG, "Background sync remove failed", it) }
+        _collectionChanged.tryEmit(Unit)
+    }
+
+    /** Remove song from collection (any mode). Used when one song per collection. */
+    suspend fun removeBySongId(songId: String) = withContext(Dispatchers.IO) {
+        dao.deleteBySongId(songId)
+        remote.removeAllBySongId(songId)
+            .onFailure { Log.w(TAG, "removeAllBySongId failed", it) }
         _collectionChanged.tryEmit(Unit)
     }
 

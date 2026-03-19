@@ -515,7 +515,7 @@ private fun SessionCard(
                         artist = session.songArtists.getOrElse(i) { "" },
                         coverUrl = session.songCoverUrls.getOrElse(i) { "" },
                         mode = session.mode,
-                        isInCollection = collection.any { it.songId == id && it.mode == session.mode },
+                        isInCollection = collection.any { it.songId == id },
                         viewModel = viewModel
                     )
                 }
@@ -580,7 +580,7 @@ private fun SessionSongItem(
                     interactionSource = remember { MutableInteractionSource() },
                     onClick = {
                         if (isInCollection) {
-                            viewModel.removeFromCollection(songId, mode)
+                            viewModel.removeBySongId(songId)
                         } else {
                             viewModel.addToCollection(songId, title, artist, mode, coverUrl)
                         }

@@ -187,4 +187,16 @@ class ArchiveRepository {
             .await()
         docs.documents.forEach { it.reference.delete().await() }
     }
+
+    /** Delete all entries for songId (any mode). Used when adding to ensure one song appears only once. */
+    suspend fun removeAllBySongId(songId: String): Result<Unit> = runCatching {
+        val uid = currentUserId() ?: throw IllegalStateException("Not logged in")
+        val docs = db.collection(FirestoreCollections.USERS)
+            .document(uid)
+            .collection(FirestoreCollections.COLLECTION)
+            .whereEqualTo("songId", songId)
+            .get()
+            .await()
+        docs.documents.forEach { it.reference.delete().await() }
+    }
 }

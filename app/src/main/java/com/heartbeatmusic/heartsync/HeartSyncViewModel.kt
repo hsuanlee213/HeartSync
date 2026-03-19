@@ -163,13 +163,12 @@ class HeartSyncViewModel @Inject constructor(
     private val _collection = MutableStateFlow<List<CollectionItem>>(emptyList())
     val collection: StateFlow<List<CollectionItem>> = _collection.asStateFlow()
 
-    /** Heart filled only when current song + current mode exist in collection. */
+    /** Heart filled when current song exists in collection (one song per collection, mode shows which mode it was added from). */
     val isCurrentSongInCollection: StateFlow<Boolean> = combine(
         _currentSongId,
-        _collection,
-        _currentMode
-    ) { songId, items, mode ->
-        songId.isNotEmpty() && items.any { it.songId == songId && it.mode == mode.name }
+        _collection
+    ) { songId, items ->
+        songId.isNotEmpty() && items.any { it.songId == songId }
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -803,10 +802,10 @@ class HeartSyncViewModel @Inject constructor(
                 Log.w(TAG, "HeartSync_Debug: songId empty, aborting")
                 return@launch
             }
-            val inCollection = _collection.value.any { it.songId == songId && it.mode == currentMode }
+            val inCollection = _collection.value.any { it.songId == songId }
 
             if (inCollection) {
-                runCatching { collectionRepository.removeFromCollection(songId, currentMode) }
+                runCatching { collectionRepository.removeBySongId(songId) }
                     .onFailure { Log.e(TAG, "HeartSync_Debug: Failed to remove from collection", it) }
             } else {
                 Log.d(TAG, "HeartSync_Debug: Saving song with mode: $currentMode (songId=$songId title=$title)")

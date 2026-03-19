@@ -21,6 +21,9 @@ interface CollectionDao {
     @Query("DELETE FROM collection WHERE songId = :songId AND mode = :mode")
     suspend fun deleteBySongIdAndMode(songId: String, mode: String)
 
+    @Query("DELETE FROM collection WHERE songId = :songId")
+    suspend fun deleteBySongId(songId: String)
+
     @Query("DELETE FROM collection")
     suspend fun deleteAll()
 }

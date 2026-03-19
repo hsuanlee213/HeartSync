@@ -112,13 +112,20 @@ class ArchiveViewModel @Inject constructor(
         }
     }
 
+    /** Remove song from collection (any mode). Used when one song per collection. */
+    fun removeBySongId(songId: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            collectionRepository.removeBySongId(songId)
+        }
+    }
+
     /** Persist deletion to DB + Firestore — call when UNDO snackbar is dismissed. */
     fun removeFromCollection(songId: String, mode: String) {
         val id = "${songId}_${mode}"
         pendingCollectionDeletion.remove(id)
         Log.d(TAG, "HeartSync_Debug: Removing from collection songId=$songId mode=$mode")
         viewModelScope.launch(Dispatchers.IO) {
-            collectionRepository.removeFromCollection(songId, mode)
+            collectionRepository.removeBySongId(songId)
             Log.d(TAG, "HeartSync_Debug: Removed from collection successfully")
         }
     }
