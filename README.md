@@ -6,7 +6,9 @@ Imagine a music app that supports different energy states throughout the day —
 
 ## APK
 
-> - An **APK download link** if you want others to try the app
+You can download and install the latest Android build here:
+
+[Download the latest APK](apk/HeartSync-release.apk)
 
 ## Overview
 
