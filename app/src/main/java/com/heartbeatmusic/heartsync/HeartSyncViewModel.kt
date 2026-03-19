@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.CoroutineScope
@@ -759,6 +760,15 @@ class HeartSyncViewModel @Inject constructor(
         _currentMode.value = mode
         if (heartRateProvider is MockHeartRateProvider) {
             heartRateProvider.setMode(mode)
+        }
+    }
+
+    /** Refresh collection from DB. Call when Terminal becomes visible so heart icon stays in sync after deletions in Archive. */
+    fun refreshCollection() {
+        viewModelScope.launch(Dispatchers.IO) {
+            runCatching {
+                _collection.value = collectionRepository.collectionFlow().first()
+            }
         }
     }
 

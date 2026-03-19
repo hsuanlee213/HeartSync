@@ -33,6 +33,11 @@ class TerminalFragment : Fragment() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        viewModel.refreshCollection()
+    }
+
     private fun setupModeSwitcher(view: View) {
         val toggleGroup = view.findViewById<MaterialButtonToggleGroup>(R.id.mode_switcher_root)
         val checkedId = when (viewModel.currentMode.value) {
