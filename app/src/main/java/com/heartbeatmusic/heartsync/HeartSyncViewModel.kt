@@ -43,6 +43,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
@@ -193,6 +194,13 @@ class HeartSyncViewModel @Inject constructor(
         initPlaybackState()
         collectionRepository.collectionFlow()
             .onEach { _collection.value = it }
+            .launchIn(viewModelScope)
+        collectionRepository.collectionChanged
+            .onEach {
+                _collection.value = withContext(Dispatchers.IO) {
+                    collectionRepository.collectionFlow().first()
+                }
+            }
             .launchIn(viewModelScope)
         viewModelScope.launch(Dispatchers.IO) {
             recordAchievementForLastMonth(LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE))

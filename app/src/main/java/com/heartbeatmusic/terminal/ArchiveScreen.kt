@@ -601,28 +601,22 @@ private fun CollectionContent(
     // AnimatedContent to propagate the updated `items` parameter down through its lambda.
     val items by viewModel.collection.collectAsStateWithLifecycle(initialValue = emptyList())
     var deletingCollectionIds by remember { mutableStateOf(setOf<String>()) }
-    val scope = rememberCoroutineScope()
     val haptic = LocalHapticFeedback.current
     val density = LocalDensity.current
 
     fun handleTrashClick(item: CollectionItem) {
-        scope.launch {
-            deletingCollectionIds = deletingCollectionIds + item.id
-            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-            delay(350)
-            deletingCollectionIds = deletingCollectionIds - item.id
-            // Hide from UI immediately — DB is not touched yet so UNDO is always safe,
-            // even if the user switches tabs and this coroutine scope is later cancelled.
-            viewModel.removeFromCollectionUI(item)
-            val result = snackbarHostState.showSnackbar(
+        deletingCollectionIds = deletingCollectionIds + item.id
+        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+        viewModel.deleteFromCollectionWithUndo(
+            item = item,
+            delayMs = 350,
+            onBeforeRemove = { deletingCollectionIds = deletingCollectionIds - item.id }
+        ) {
+            snackbarHostState.showSnackbar(
                 message = "Song removed from collections",
                 actionLabel = "UNDO",
                 duration = SnackbarDuration.Long
             )
-            when (result) {
-                SnackbarResult.ActionPerformed -> viewModel.restoreInCollection(item)
-                SnackbarResult.Dismissed -> viewModel.removeFromCollection(item.songId, item.mode)
-            }
         }
     }
 

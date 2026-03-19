@@ -7,6 +7,8 @@ import com.heartbeatmusic.data.remote.ArchiveRepository
 import com.heartbeatmusic.data.remote.JamendoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
@@ -23,6 +25,10 @@ class CollectionRepository(
     private val jamendo: JamendoRepository
 ) {
     private val dao = AppDatabase.getInstance(context).collectionDao()
+
+    private val _collectionChanged = MutableSharedFlow<Unit>(replay = 0, extraBufferCapacity = 1)
+    /** Emits when add or remove completes. HeartSyncViewModel subscribes to keep heart icon in sync. */
+    val collectionChanged: SharedFlow<Unit> = _collectionChanged
 
     /** Flow of collection from local DB. UI observes this for instant updates. */
     fun collectionFlow(): Flow<List<CollectionItem>> =
@@ -51,6 +57,7 @@ class CollectionRepository(
         )
         remote.addToCollection(songId, title, artist, mode, coverUrl, addedAt)
             .onFailure { Log.w(TAG, "Background sync add failed", it) }
+        _collectionChanged.tryEmit(Unit)
     }
 
     /** Remove item from local DB, then sync to Firestore on IO dispatcher. */
@@ -58,6 +65,7 @@ class CollectionRepository(
         dao.deleteBySongIdAndMode(songId, mode)
         remote.removeFromCollection(songId, mode)
             .onFailure { Log.w(TAG, "Background sync remove failed", it) }
+        _collectionChanged.tryEmit(Unit)
     }
 
     /**

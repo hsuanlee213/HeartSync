@@ -1,5 +1,7 @@
 package com.heartbeatmusic.terminal
 
+import android.util.Log
+import androidx.compose.material3.SnackbarResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.heartbeatmusic.data.model.CollectionItem
@@ -14,8 +16,11 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "HeartSync"
 
 @HiltViewModel
 class ArchiveViewModel @Inject constructor(
@@ -111,8 +116,33 @@ class ArchiveViewModel @Inject constructor(
     fun removeFromCollection(songId: String, mode: String) {
         val id = "${songId}_${mode}"
         pendingCollectionDeletion.remove(id)
+        Log.d(TAG, "HeartSync_Debug: Removing from collection songId=$songId mode=$mode")
         viewModelScope.launch(Dispatchers.IO) {
             collectionRepository.removeFromCollection(songId, mode)
+            Log.d(TAG, "HeartSync_Debug: Removed from collection successfully")
+        }
+    }
+
+    /**
+     * Delete with UNDO snackbar. Uses viewModelScope so deletion persists even if user switches tabs.
+     * @param delayMs Delay before removing (for swipe animation)
+     * @param onBeforeRemove Callback to run before removeFromCollectionUI (e.g. clear deleting state)
+     */
+    fun deleteFromCollectionWithUndo(
+        item: CollectionItem,
+        delayMs: Long = 0,
+        onBeforeRemove: () -> Unit = {},
+        showSnackbar: suspend () -> SnackbarResult
+    ) {
+        viewModelScope.launch {
+            if (delayMs > 0) delay(delayMs)
+            onBeforeRemove()
+            removeFromCollectionUI(item)
+            val result = showSnackbar()
+            when (result) {
+                SnackbarResult.ActionPerformed -> restoreInCollection(item)
+                SnackbarResult.Dismissed -> removeFromCollection(item.songId, item.mode)
+            }
         }
     }
 }
