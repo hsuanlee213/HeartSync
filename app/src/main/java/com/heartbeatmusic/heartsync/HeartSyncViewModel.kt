@@ -635,7 +635,7 @@ class HeartSyncViewModel @Inject constructor(
             if (isNetworkAvailable()) {
                 Log.d(TAG, "HeartSync_Debug: Attempting Jamendo API fetch for mode=$mode...")
                 runCatching { jamendoRepository.fetchTracksForMode(mode) }
-                    .onSuccess { handleSongsLoaded(it) }
+                    .onSuccess { handleSongsLoaded(it, mode) }
                     .onFailure {
                         Log.d(TAG, "HeartSync_Debug: Jamendo fetch failed, switching to Assets path.")
                         playLocalAsset()
@@ -647,13 +647,18 @@ class HeartSyncViewModel @Inject constructor(
         }
     }
 
-    internal fun handleSongsLoaded(songs: List<Song>?) {
+    internal fun handleSongsLoaded(songs: List<Song>?, fetchedForMode: TerminalMode) {
+        if (_currentMode.value != fetchedForMode) {
+            Log.d(TAG, "HeartSync_Debug: Ignoring stale fetch for $fetchedForMode (current mode=${_currentMode.value})")
+            if (player.currentMediaItem == null) loadAndPlayFirstSong()
+            return
+        }
         val list = (songs ?: emptyList()).filter { !it.audioUrl.isNullOrEmpty() }.shuffled()
         if (list.isEmpty()) {
             playFromEssentials()
             return
         }
-        playFromApi(list)
+        playFromApi(list, fetchedForMode)
     }
 
     /** Play essential audio from local cache (Firebase Storage). */
@@ -662,8 +667,11 @@ class HeartSyncViewModel @Inject constructor(
         playFromEssentials()
     }
 
-    internal fun playFromApi(songs: List<Song>) {
-        val mode = _currentMode.value
+    internal fun playFromApi(songs: List<Song>, mode: TerminalMode) {
+        if (_currentMode.value != mode) {
+            Log.d(TAG, "HeartSync_Debug: Ignoring playFromApi for stale mode=$mode (current=${_currentMode.value})")
+            return
+        }
         _playingMode.value = mode
         _playbackSource.value = "API"
 
