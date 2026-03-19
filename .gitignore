@@ -16,6 +16,7 @@ docs/PRD.md
 docs/PROJECT_OVERVIEW.md
 /build
 /captures
+app/release/
 .externalNativeBuild
 .cxx
 local.properties
