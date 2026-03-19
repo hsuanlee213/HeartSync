@@ -679,13 +679,9 @@ class HeartSyncViewModel @Inject constructor(
         player.prepare()
         player.play()
 
-        val first = songs.first()
-        val firstTitle = first.title?.takeIf { it.isNotEmpty() } ?: "Unknown"
-        val firstArtist = first.artist?.takeIf { it.isNotEmpty() } ?: "Unknown"
+        // Do NOT set _currentSongId/_displayTitle here: shuffle may play a different song than
+        // songs.first(). onMediaItemTransition will set the correct values when playback starts.
         _isPanelExpanded.value = true
-        _currentSongId.value = first.id?.takeIf { it.isNotEmpty() } ?: ""
-        _displayTitle.value = firstTitle
-        _displayArtist.value = firstArtist
         _displayFirstTag.value = ""
         _displayCoverColor.value = null
     }
@@ -768,28 +764,27 @@ class HeartSyncViewModel @Inject constructor(
 
     /** Toggle current track in Collection: add if not in, remove if in. Syncs with Archive tab. */
     fun toggleCollection() {
-        // Capture mode on Main thread at click time (not hardcoded) - ensures ZEN/SYNC/OVERDRIVE all work
+        // Capture all values on Main at click time to avoid race: track could change before IO runs
         val currentMode = _currentMode.value.name
-        Log.d(TAG, "HeartSync_Debug: toggleCollection mode=$currentMode songId=${_currentSongId.value}")
+        val songId = _currentSongId.value
+        val title = _currentTrackTitle.value.ifEmpty { _displayTitle.value }.ifEmpty { "Unknown" }
+        val artist = _currentTrackArtist.value.ifEmpty { _displayArtist.value }
+        val coverUrl = _currentCoverUrl.value ?: ""
+        Log.d(TAG, "HeartSync_Debug: toggleCollection mode=$currentMode songId=$songId title=$title")
 
         viewModelScope.launch(Dispatchers.IO) {
-            val songId = _currentSongId.value
             if (songId.isEmpty()) {
                 Log.w(TAG, "HeartSync_Debug: songId empty, aborting")
                 return@launch
             }
             val inCollection = _collection.value.any { it.songId == songId && it.mode == currentMode }
-            val title = _currentTrackTitle.value.ifEmpty { _displayTitle.value }.ifEmpty { "Unknown" }
-            val artist = _currentTrackArtist.value.ifEmpty { _displayArtist.value }
-            val coverUrl = _currentCoverUrl.value ?: ""
-            val mode = currentMode
 
             if (inCollection) {
-                runCatching { collectionRepository.removeFromCollection(songId, mode) }
+                runCatching { collectionRepository.removeFromCollection(songId, currentMode) }
                     .onFailure { Log.e(TAG, "HeartSync_Debug: Failed to remove from collection", it) }
             } else {
-                Log.d(TAG, "HeartSync_Debug: Saving song with mode: $mode (songId=$songId title=$title)")
-                runCatching { collectionRepository.addToCollection(songId, title, artist, mode, coverUrl) }
+                Log.d(TAG, "HeartSync_Debug: Saving song with mode: $currentMode (songId=$songId title=$title)")
+                runCatching { collectionRepository.addToCollection(songId, title, artist, currentMode, coverUrl) }
                     .onSuccess { Log.d(TAG, "HeartSync_Debug: Added to collection successfully") }
                     .onFailure { Log.e(TAG, "HeartSync_Debug: Failed to add to collection (check login)", it) }
             }
