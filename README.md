@@ -19,40 +19,21 @@ Users can choose a mode based on their current goal: calming down, maintaining r
 Beyond playback, HeartSync also includes **daily goals**, **session history**, **favorites collection**, **monthly achievements**, and **offline-first audio fallback**. Together, these features turn the app from a simple music player into a habit-forming product that supports both entertainment and routine building.
 
 ---
-## Problem
+## Why HeartSync?
 
-Most music and wellness apps are designed around a **single activity**. A user may need one app for exercise, another for relaxation, and another for casual music listening. This creates a fragmented experience where users constantly switch between apps depending on their situation.
+Most music apps are built for a single use case. HeartSync explores a different idea: **one app that supports multiple energy states throughout the day**.
 
-**What if one app could support multiple energy states and activities through music alone?**
+Instead of forcing users to switch between separate apps for workouts, relaxation, or casual listening, HeartSync organizes playback into three BPM-based modes:
 
-HeartSync makes it come ture.
+- **ZEN** for calming listening  
+- **SYNC** for balanced listening  
+- **OVERDRIVE** for higher-energy listening  
 
-- Users often want music that matches how they feel or how they want to feel
-- Manually searching for the “right” playlist every time creates friction
-- Many apps do not encourage ongoing engagement beyond one-time playback
+The app uses the **Jamendo API** to discover tracks, applies BPM-based filtering, and plays music in a randomized flow so users can start listening quickly without manually searching for the right playlist. To keep playback reliable, it also includes **offline-first support** through **Firebase Storage** and bundled fallback audio.
 
-HeartSync addresses this by combining **mode-based music playback**, **heart-rate-inspired interaction**, and **goal tracking** into one experience. The goal is to make music selection feel more immediate, adaptive, and engaging whether the user wants to relax, stay focused, work out, or just discover something new.
+HeartSync goes beyond playback with **daily goals, session history, collections, and monthly achievements**, turning the app into more than a music player: it becomes a lightweight system for **music, mood, and habit-building**.
 
----
-
-## Solution
-
-HeartSync solves this problem by organizing playback into three BPM-based modes:
-
-- **ZEN** for lower-energy, calming listening
-- **SYNC** for steady, balanced listening
-- **OVERDRIVE** for higher-energy listening
-
-For each mode, the app fetches music from the **Jamendo API**, filters it by BPM-related logic, and plays tracks in a randomized flow so users can quickly start listening without browsing large libraries. To make the experience more reliable, the app also supports **offline-first playback** through **Firebase Storage** and bundled fallback audio.
-
-To improve retention and make the app feel more interactive, HeartSync also includes:
-
-- **Daily goals** with real-time progress tracking
-- **Session history** so users can review what they listened to
-- **Collections** for saving favorite tracks
-- **Monthly achievements** to reinforce consistent usage
-
-From a product perspective, the app combines **music discovery**, **lightweight personalization**, and **habit-building mechanics** in a single experience. From an engineering perspective, it demonstrates end-to-end Android development including media playback, offline support, local persistence, cloud integration, and reactive UI state management.
+This project reflects both **product thinking** and **engineering depth**, combining a clear user problem with Android architecture, reactive state management, cloud-backed persistence, and resilient playback design.
 
 ---
 
@@ -202,6 +183,7 @@ From a product perspective, I wanted to build something that feels more intentio
 
 ### Language
 - Kotlin 2.1.0
+- JavaScript (Node.js) — Firebase admin scripts
 
 ### UI
 - Jetpack Compose
@@ -238,6 +220,7 @@ Entities include:
 - Firebase Storage
 - Firebase Analytics  
 - Firebase BOM 34.5.0
+- Firebase Admin SDK (Node.js) — for scripts
 
 ### Concurrency
 - Kotlin Coroutines
@@ -252,6 +235,12 @@ Entities include:
 - Navigation Compose 2.7.7
 - Bottom navigation with Fragments
 
+
+### Scripts / Tooling (Node.js)
+- **Node.js** — Firebase admin scripts in `scripts/`
+- `upload-essentials-to-storage.js` — Uploads essential audio (zen.mp3, sync.mp3, overdrive.mp3) to Firebase Storage
+- `seed-firestore.js` — Seeds Firestore with activity modes, genres, and related data
+- Requires `serviceAccountKey.json` in `scripts/`; run with `node <script>.js` from `scripts/` directory
 
 ### Tools
 - Git / GitHub
@@ -360,6 +349,20 @@ JAMENDO_CLIENT_ID=your_client_id_here
 ### Firebase
 
 Firebase must be configured for authentication, Firestore, and Storage features to work properly.
+
+### Node.js Scripts (Optional)
+
+To seed Firestore or upload essential audio to Storage, use the scripts in `scripts/`:
+
+```bash
+cd scripts
+npm install
+# Place serviceAccountKey.json in scripts/
+node seed-firestore.js
+node upload-essentials-to-storage.js
+```
+
+See `docs/MUSIC_PLAYBACK_SETUP.md` for detailed setup.
 
 
 
