@@ -26,3 +26,4 @@ scripts/node_modules/
 scripts/essentials/
 **/serviceAccountKey.json
 **/serviceAccountKey.*.json
+app/google-services.json
