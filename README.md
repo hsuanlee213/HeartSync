@@ -6,9 +6,7 @@ Imagine a music app that supports different energy states throughout the day —
 
 ## APK
 
-You can download and install the latest Android build here:
-
-[Download the latest APK](apk/HeartSync-release.apk)
+Download the latest Android build from [GitHub Releases](https://github.com/hsuanlee213/HeartSync/releases/latest).
 
 ## Overview
 
@@ -337,7 +335,7 @@ The project currently includes unit tests for core profile-mapping and biometric
 
 ## Setup
 
-To run this project locally, you will need to configure Firebase and provide a valid Jamendo API client ID in `local.properties`.
+To run this project locally, you will need to configure Firebase and provide a valid Jamendo API client ID in `local.properties`. Firebase configuration is not included in this repository, so you must add your own `app/google-services.json` and set up the required Firebase services for your project.
 
 ### Environment Variables
 Add the following to `local.properties`:
