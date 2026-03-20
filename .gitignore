@@ -27,6 +27,3 @@ scripts/essentials/
 **/serviceAccountKey.json
 **/serviceAccountKey.*.json
 app/google-services.json
-
-# APK — use GitHub Releases for distribution
-apk/
